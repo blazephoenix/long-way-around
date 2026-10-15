@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+artifact/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Script output (screenshots, profiles)
+shots/
+out/
+*.cpuprofile
+
+# Logs (perf-log.txt is a tracked baseline, not a log)
+npm-debug.log*
+*.log
+
+# Env and editor
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Claude Code: per-user settings stay local; shared settings are committed
+.claude/settings.local.json

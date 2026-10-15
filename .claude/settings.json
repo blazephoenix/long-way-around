@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run dev:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npm run sim)",
+      "Bash(npm run build)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx vite build)",
+      "Bash(node scripts/artifact.mjs)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "mcp__t3-code__preview_open",
+      "mcp__t3-code__preview_snapshot",
+      "mcp__t3-code__preview_evaluate"
+    ]
+  }
+}

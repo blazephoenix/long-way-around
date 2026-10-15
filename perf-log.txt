@@ -1,0 +1,11 @@
+# 1920x1080, software GL (SwiftShader): CPU timings are meaningful, GPU time is not.
+medium forest    sim  0.40 ms  render-submit   5.40 ms  draw calls  103  tris   273k  instances   3259  worst chunk build 35.6 ms slice, 37 ms total
+medium coast     sim  0.50 ms  render-submit   8.10 ms  draw calls  105  tris   183k  instances   1464  worst chunk build 22.2 ms slice, 36 ms total
+medium desert    sim  0.80 ms  render-submit   7.40 ms  draw calls  121  tris   113k  instances    456  worst chunk build 18.4 ms slice, 44 ms total
+medium farm      sim  1.10 ms  render-submit   6.00 ms  draw calls  120  tris   244k  instances   2806  worst chunk build 12.2 ms slice, 42 ms total
+medium tropical  sim  0.90 ms  render-submit   4.60 ms  draw calls  164  tris   978k  instances  18940  worst chunk build 14.2 ms slice, 40 ms total
+medium city      sim  0.90 ms  render-submit   9.10 ms  draw calls  182  tris   262k  instances    568  worst chunk build 12.2 ms slice, 30 ms total
+low    tropical  sim  0.50 ms  render-submit   5.50 ms  draw calls   82  tris   422k  instances  12756  worst chunk build 60.2 ms slice, 63 ms total
+low    city      sim  1.40 ms  render-submit  10.40 ms  draw calls  161  tris   221k  instances    357  worst chunk build 12.7 ms slice, 16 ms total
+high   tropical  sim  0.70 ms  render-submit   5.80 ms  draw calls  158  tris  1225k  instances  24131  worst chunk build 16.4 ms slice, 47 ms total
+high   city      sim  0.70 ms  render-submit   5.80 ms  draw calls  174  tris   279k  instances    773  worst chunk build 12.0 ms slice, 26 ms total
