@@ -4,8 +4,8 @@ import type { World } from '../world/world';
 
 export const EYE_H = 1.62;
 const R = 0.35;
-const WALK = 5 / 3.6;
-const JOG = 9 / 3.6;
+const WALK = 12 / 3.6;
+const JOG = 22 / 3.6;
 
 export class Walker {
   pos = new THREE.Vector3();
