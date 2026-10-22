@@ -212,6 +212,8 @@ const MODELS: Record<string, () => AnimalModel> = {
   }),
 };
 
+export const ANIMAL_KEYS = Object.keys(MODELS);
+
 export function animalModel(key: string): AnimalModel {
   return (MODELS[key] ?? MODELS.deer)();
 }

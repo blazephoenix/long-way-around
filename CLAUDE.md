@@ -17,6 +17,8 @@ SINGLE=1 npx vite build && node scripts/artifact.mjs         # single-file build
 
 URL flags for manual checks: `?seed=lantern` (fixed world), `?play` (skip title), `?auto` (autopilot), `?hour=17.5`, `?q=low|medium|high`, `?biome=<BiomeId>` (single-biome world), `?s=<metres>` (spawn station), `?fps` (counter with draw calls and triangles).
 
+`?gallery` opens the asset gallery (`src/gallery/`) instead of the game: every model laid out on one lot with the game's sky, toon ramp and outline pass, a list to jump between them, a time-of-day slider and a variant (seed) stepper. New models get an entry in `src/gallery/assets.ts`. While a model is being reworked, its entry carries a `legacy` builder so old and new stand side by side; once the new one is approved, delete the legacy builder (and `src/gallery/legacy.ts` when it is empty).
+
 ### Checking the game in a browser
 
 Use the Claude desktop app's built-in browser (`Claude_Browser` tools) for visual checks. Run `npm run dev` in the background, then `preview_start` on `localhost:5173/?seed=lantern&play&auto&q=low&fps`, and take screenshots with `computer` (action `screenshot`). The tools exist only when the session runs in the Claude desktop app; if they are missing or cannot reach the app, tell the user and stop.

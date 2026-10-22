@@ -1,9 +1,16 @@
 import './style.css';
 import { App } from './ui/app';
 
-const app = new App(document.getElementById('c') as HTMLCanvasElement, document.getElementById('ui') as HTMLElement);
-(window as any).__app = app;
-app.boot();
+const canvas = document.getElementById('c') as HTMLCanvasElement;
+const ui = document.getElementById('ui') as HTMLElement;
+if (new URLSearchParams(location.search).has('gallery')) {
+  // asset gallery: every model on one lot, no game
+  import('./gallery/gallery').then((g) => g.startGallery(canvas, ui));
+} else {
+  const app = new App(canvas, ui);
+  (window as any).__app = app;
+  app.boot();
+}
 import * as subjects from '../data/subjects';
 (window as any).__subjects = subjects;
 import { FEATURES } from './core/features';
