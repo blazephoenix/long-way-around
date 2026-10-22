@@ -1,6 +1,6 @@
 # Scenery references and the stereotype check
 
-The India layer and the biome palettes were built from these references. Every sign, slogan, name and line of dialogue in the game is original.
+The India layer and the biome palettes were built from these references. Slogans, ghat rhymes and dialogue are original; place and business names are real (see "Names" below).
 
 ## What each reference informed
 
@@ -25,7 +25,20 @@ The India layer and the biome palettes were built from these references. Every s
 - **Regions are spread out, not blended into one place.** Bengali, Kannada, Tamil, Malayalam, Marathi, Punjabi and Hindi words each appear where the speaker comes from. Festivals named include Durga Puja, Onam, Pongal, Christmas and Eid.
 - **Animals behave like animals.** Cows and buffaloes rest on rural roads and traffic eases around them; it is never played as a joke.
 - **No caricatured accents or mystical gurus.** Characters are a student, a retired geography teacher, a trucker waiting on a clutch plate, a pilgrim and a photographer, each with ordinary concerns.
-- **No copied slogans, brands or logos.** Truck backs carry originals in the "please honk" tradition ("AMMA SAYS DRIVE SLOW", "HONK SOFTLY / I AM LISTENING"). Paint names describe colours ("Vintage sedan white", "Family hatchback red") instead of using car brands. Ghat signs are original rhymes ("DRIVE LIKE THE CHAI IS HOT"). Dhaba names are invented.
+- **Original slogans, real names.** Truck backs carry originals in the "please honk" tradition ("AMMA SAYS DRIVE SLOW", "HONK SOFTLY / I AM LISTENING"). Paint names describe colours ("Vintage sedan white", "Family hatchback red"). Ghat signs are original rhymes ("DRIVE LIKE THE CHAI IS HOT"). Names of places and businesses are real (decided 2026-10-22, replacing the earlier invented names); no logos are drawn, only names in text.
+
+## Names
+
+Real names, so the road reads like a real Indian highway. Each kind walks its list in a fixed order along the road so neighbours differ.
+
+| In the game | Source |
+|---|---|
+| Kilometre-stone towns per biome | Real towns of the region each biome draws on: Khasi Hills (forest), Konkan and Kerala coast, western Rajasthan (desert), Punjab and Haryana (farm), Nilgiris, Munnar and Kodagu (tropical), large cities (city) |
+| Fuel stations | Indian fuel retailers (IndianOil, Bharat Petroleum, HP, Jio-bp, Shell) with common dealer names (Sharma Filling Station, Kisan Seva Kendra) |
+| Dhabas | Well-known highway dhabas of Murthal, Amritsar, Ambala and Jalandhar, and the Sethi Dhaba hoarding photographed in Punjab |
+| Diners | Highway restaurant chains (Haldiram's, Sagar Ratna, A2B, Kamat, MTR) |
+| Motels | Haryana Tourism's highway complexes, named after birds (Blue Jay, Skylark, Kingfisher) |
+| Tea estates | Estates of the Nilgiris and Munnar (Glendale, Korakundah, Chamraj, Kolukkumalai, Lockhart) |
 
 ## One deliberate deviation from the brief
 

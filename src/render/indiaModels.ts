@@ -4,10 +4,12 @@
 import * as THREE from 'three';
 import { registerBuilder, signMesh, PropOut } from './props';
 import { ModelBuilder } from './models';
+import { beam } from './carKit';
 import { toon } from './toon';
 import type { Site } from '../world/sites';
 import type { Rng } from '../world/prng';
-import { styleFor, buildDiner, buildStand } from '../stops/stopModels';
+import { styleFor, buildDiner, buildStand, stopName, signText } from '../stops/stopModels';
+import { cycle } from '../world/prng';
 
 const SAND = 0xd8b88a, SAND2 = 0xc8a070, SAND3 = 0xb8905e;
 
@@ -262,8 +264,9 @@ registerBuilder('teaestate', (m, _g, s, r, out) => {
   // a sign at the estate road and a few silver oaks; the bushes come from the vegetation layer
   m.box(0.12, 2, 0.12, 0x5a5f66, { p: [-1.4, 1, 0] });
   m.box(0.12, 2, 0.12, 0x5a5f66, { p: [1.4, 1, 0] });
-  const names = ['KURINJI HILLS\nTEA ESTATE', 'MISTY RIDGE\nTEA ESTATE', 'NEELA VALLEY\nTEA ESTATE'];
-  const sm = signMesh(names[Math.floor(r.float() * names.length)], 3.2, 1.3, '#2f6a4a', '#f2ead2');
+  // real estates of the Nilgiris and Munnar, walked in order along the road so neighbours differ
+  const names = ['KOLUKKUMALAI\nTEA ESTATE', 'GLENDALE\nTEA ESTATE', 'KORAKUNDAH\nTEA ESTATE', 'CHAMRAJ\nTEA ESTATE', 'LOCKHART\nTEA ESTATE', 'THIASHOLA\nTEA ESTATE', 'KANNAN DEVAN\nHILLS'];
+  const sm = signMesh(cycle(names, Math.floor(s.s / 1000)), 3.2, 1.3, '#2f6a4a', '#f2ead2');
   sm.position.set(0, 2.2, -0.08);
   sm.rotation.y = Math.PI;
   out.extras.push(sm);
@@ -276,73 +279,232 @@ registerBuilder('teaestate', (m, _g, s, r, out) => {
 });
 
 // ---------------------------------------------------------------- dhaba (diner variant) and stand variants
-function buildDhaba(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, out: PropOut) {
-  // open-fronted kitchen under a tin roof, charpais in front, a tandoor glowing at night
-  m.box(14, 3.2, 6, 0xe8dcc0, { p: [0, 1.6, 7] });
-  m.box(15, 0.15, 10, 0x8a9aa2, { p: [0, 3.4, 4.5], r: [0.06, 0, 0] });
-  for (const x of [-7, -2.3, 2.3, 7]) m.box(0.25, 3.2, 0.25, 0x6a4a34, { p: [x, 1.6, 0.2] });
-  g.box(10, 1.2, 0.1, 0xffd890, { p: [0, 1.8, 3.95] });
-  // charpais: wooden frames with woven rope tops
-  for (let i = 0; i < 4; i++) {
-    const x = -5 + i * 3.3, z = -3.5 + (i % 2) * 1.2;
-    m.box(1.0, 0.08, 2.0, 0x8a6448, { p: [x, 0.5, z] });
-    for (let k = 0; k < 5; k++) m.box(0.9, 0.02, 0.04, 0xd8c8a0, { p: [x, 0.55, z - 0.8 + k * 0.4] });
-    for (const [dx, dz] of [[-0.45, -0.95], [0.45, -0.95], [-0.45, 0.95], [0.45, 0.95]]) m.box(0.07, 0.5, 0.07, 0x6a4a34, { p: [x + dx, 0.25, z + dz] });
+const STEEL = 0xc8ccd0, WOOD = 0x8a6448, WOOD_DARK = 0x6a4a34, ROPE = 0xd8c8a0, TIN = 0x9aa4aa;
+
+/** charpai: a wooden frame on four turned legs with a woven rope top; `along` lays it along x */
+function charpai(m: ModelBuilder, x: number, z: number, along: boolean, plank: boolean) {
+  const L = 1.9, W = 0.9, y = 0.45;
+  const [lx, lz] = along ? [L, W] : [W, L];
+  m.box(lx - 0.08, 0.02, lz - 0.08, ROPE, { p: [x, y + 0.02, z] });
+  for (let k = 1; k < 5; k++) {
+    m.box(lx - 0.1, 0.012, 0.025, 0xb8a070, { p: [x, y + 0.035, z - lz / 2 + (k * lz) / 5] });
+    m.box(0.025, 0.012, lz - 0.1, 0xb8a070, { p: [x - lx / 2 + (k * lx) / 5, y + 0.035, z] });
   }
-  // tandoor
-  m.cyl(0.55, 0.7, 1.0, 10, 0xb8764a, { p: [5.8, 0.5, 2.6] });
-  g.cyl(0.3, 0.3, 0.05, 10, 0xff8a3a, { p: [5.8, 1.02, 2.6] });
-  // steel water drum and a few glasses
-  m.cyl(0.35, 0.35, 0.9, 10, 0xc8ccd0, { p: [-6.5, 0.45, 2.2] });
-  const names = ['PIND RASOI\nDHABA', 'HIGHWAY RASOI', 'APNA GHAR\nDHABA', 'SHAM-E-SAFAR\nDHABA'];
-  const st = styleFor(site);
-  void st;
-  const sign = signMesh(names[Math.floor(r.float() * names.length)], 6, 1.6, '#c8302a', '#f7e8c8');
-  sign.position.set(0, 4.3, 0.1);
+  for (const s of [-1, 1]) {
+    m.box(lx, 0.07, 0.06, WOOD, { p: [x, y, z + (s * lz) / 2] });
+    m.box(0.06, 0.07, lz, WOOD, { p: [x + (s * lx) / 2, y, z] });
+  }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.cyl(0.045, 0.035, y, 6, WOOD_DARK, { p: [x + (sx * lx) / 2, y / 2, z + (sz * lz) / 2] });
+  // a plank laid across the middle serves as the table
+  if (plank) m.box(along ? 0.32 : 1.3, 0.04, along ? 1.3 : 0.32, 0x9a7450, { p: [x, y + 0.3, z] });
+  if (plank) for (const s of [-0.45, 0.45]) m.box(0.06, 0.28, 0.06, WOOD_DARK, { p: [x + (along ? 0 : s), y + 0.15, z + (along ? s : 0)] });
+}
+
+/** plastic chair, facing +z or -z */
+function chair(m: ModelBuilder, x: number, z: number, face: number, colour: number) {
+  m.box(0.44, 0.04, 0.42, colour, { p: [x, 0.45, z] });
+  m.box(0.44, 0.42, 0.04, colour, { p: [x, 0.68, z - face * 0.2], r: [face * 0.12, 0, 0] });
+  for (const sx of [-0.19, 0.19]) for (const sz of [-0.18, 0.18]) m.box(0.035, 0.45, 0.035, colour, { p: [x + sx, 0.22, z + sz] });
+}
+
+function buildDhaba(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, out: PropOut) {
+  // a low painted kitchen block with a name hoarding on the roof and an open front: the cooking
+  // counter inside, a tandoor by the way in, steel tables and plastic chairs under a tin awning
+  // hung with string lights, charpais out front, a steel water cooler at the side
+  const wall = r.pick([0xf2ead2, 0xe8c27a, 0x8ac8c0, 0xf0b8a0, 0xd8e0a8]);
+  const band = r.pick([0xc8302a, 0x2a6a4a, 0x2a4a8a, 0xd86a2a]);
+  const W = 12, H = 3.2, z0 = 5, z1 = 10, zc = (z0 + z1) / 2, D = z1 - z0;
+  // kitchen block: back and side walls, piers either side of a wide opening, a lintel over it
+  m.box(W, H, 0.25, wall, { p: [0, H / 2, z1] });
+  for (const s of [-1, 1]) {
+    m.box(0.25, H, D, wall, { p: [(s * W) / 2, H / 2, zc] });
+    m.box(1.6, H, 0.25, wall, { p: [s * (W / 2 - 0.8), H / 2, z0] });
+    m.box(1.62, 0.9, 0.02, band, { p: [s * (W / 2 - 0.8), 0.45, z0 - 0.135] });
+    m.box(0.02, 0.9, D + 0.25, band, { p: [s * (W / 2 + 0.135), 0.45, zc] });
+  }
+  m.box(W - 3.2, 0.7, 0.25, wall, { p: [0, H - 0.35, z0] });
+  m.box(W - 3.2, 0.1, 0.02, band, { p: [0, H - 0.72, z0 - 0.135] });
+  m.box(W - 0.3, 0.12, D, 0x9a948a, { p: [0, 0.06, zc] });
+  m.box(W - 0.4, H - 0.2, 0.02, 0x6a5a4a, { p: [0, H / 2, z1 - 0.14] }); // smoke-darkened back wall inside
+  // flat roof with a parapet and a black water tank
+  m.box(W + 0.3, 0.2, D + 0.3, 0xd8d2c4, { p: [0, H + 0.1, zc] });
+  for (const s of [-1, 1]) {
+    m.box(W + 0.3, 0.45, 0.12, wall, { p: [0, H + 0.42, zc + (s * (D + 0.2)) / 2] });
+    m.box(0.12, 0.45, D + 0.3, wall, { p: [(s * (W + 0.2)) / 2, H + 0.42, zc] });
+  }
+  m.cyl(0.6, 0.6, 1.1, 12, 0x1e1e1e, { p: [W / 2 - 1.3, H + 0.75, z1 - 1.0] });
+  m.cyl(0.45, 0.6, 0.1, 12, 0x1e1e1e, { p: [W / 2 - 1.3, H + 1.35, z1 - 1.0] });
+  // hoarding on a steel frame along the roof's front edge
+  for (const x of [-3.2, 0, 3.2]) m.box(0.1, 2.5, 0.1, 0x5a5f66, { p: [x, H + 1.45, z0 + 0.64] }); // behind the board, touching it
+  m.box(7, 2.2, 0.08, 0x3a3f46, { p: [0, H + 1.65, z0 + 0.55] });
+  const sign = signMesh(signText(stopName(site)), 6.8, 2.0, '#c8302a', '#f7e8c8');
+  sign.position.set(0, H + 1.65, z0 + 0.5);
   sign.rotation.y = Math.PI;
   out.extras.push(sign);
+  // cooking counter in the opening: steel top, big pots, a kadhai on a burner, plates on a shelf
+  m.box(6.4, 0.9, 0.8, 0xc8c2b4, { p: [0.4, 0.45, z0 + 0.6] });
+  m.box(6.5, 0.05, 0.85, 0x7a7a7a, { p: [0.4, 0.92, z0 + 0.6] });
+  for (let i = 0; i < 4; i++) {
+    m.cyl(0.27, 0.24, 0.45, 12, STEEL, { p: [-2.2 + i * 0.75, 1.17, z0 + 0.6] });
+    m.cyl(0.29, 0.29, 0.03, 12, 0xa8acb0, { p: [-2.2 + i * 0.75, 1.41, z0 + 0.6] });
+  }
+  m.cyl(0.16, 0.16, 0.12, 10, 0x2a2a2a, { p: [2.6, 1.0, z0 + 0.6] });
+  m.cyl(0.45, 0.18, 0.18, 12, 0x2a2a2a, { p: [2.6, 1.15, z0 + 0.6] });
+  g.cyl(0.14, 0.14, 0.02, 10, 0xff8a3a, { p: [2.6, 1.07, z0 + 0.6] });
+  m.box(5, 0.05, 0.35, WOOD, { p: [0, 1.85, z1 - 0.35] });
+  for (let i = 0; i < 8; i++) m.cyl(0.13, 0.13, 0.02, 10, STEEL, { p: [-2.2 + i * 0.55, 2.0, z1 - 0.3], r: [Math.PI / 2 - 0.25, 0, 0] });
+  g.box(1.4, 0.06, 0.06, 0xf4fbff, { p: [-2, H - 0.25, zc] }); // tube lights
+  g.box(1.4, 0.06, 0.06, 0xf4fbff, { p: [2, H - 0.25, zc] });
+  // tandoor: a clay drum in a cement plinth, its mouth glowing (the order point is beside it)
+  m.box(1.25, 0.6, 1.25, 0xd8d0c0, { p: [5.8, 0.3, 2.6] });
+  m.cyl(0.5, 0.58, 0.45, 12, 0xb8764a, { p: [5.8, 0.82, 2.6] });
+  m.cyl(0.26, 0.26, 0.02, 12, 0x2a1a12, { p: [5.8, 1.05, 2.6] });
+  g.cyl(0.18, 0.18, 0.025, 10, 0xff8a3a, { p: [5.8, 1.06, 2.6] });
+  // tin awning sloping toward the road on slim poles, string lights along its edge
+  m.box(W + 1, 0.05, 4.8, TIN, { p: [0, 2.82, 2.6], r: [-0.08, 0, 0] });
+  for (let i = 0; i < 12; i++) m.box(0.04, 0.03, 4.8, 0x7a8488, { p: [-6.2 + i * 1.13, 2.86, 2.6], r: [-0.08, 0, 0] });
+  for (const x of [-6.3, -2.1, 2.1, 6.3]) m.cyl(0.05, 0.05, 2.45, 6, 0x7a7f86, { p: [x, 1.22, 0.4] });
+  const BULBS = [0xff6a5a, 0xffd25a, 0x6ad2ff, 0x8aff8a, 0xffffff];
+  for (let i = 0; i <= 26; i++) {
+    const x = -6.3 + i * (12.6 / 26), seg = ((x + 6.3) % 4.2) / 4.2;
+    g.sphere(0.05, 6, 4, BULBS[i % BULBS.length], { p: [x, 2.48 - Math.sin(seg * Math.PI) * 0.14, 0.36] });
+  }
+  // steel tables with plastic chairs under the awning
+  const chairCol = r.pick([0xe8e8e2, 0xc8302a, 0x2a5ab8]);
+  for (const x of [-4.4, -1.2, 2.0]) {
+    m.box(1.2, 0.04, 0.7, STEEL, { p: [x, 0.75, 2.6] });
+    for (const sx of [-0.55, 0.55]) for (const sz of [-0.3, 0.3]) m.box(0.035, 0.75, 0.035, 0x9a9ea2, { p: [x + sx, 0.37, 2.6 + sz] });
+    for (const sx of [-0.3, 0.3]) {
+      chair(m, x + sx, 2.0, -1, chairCol);
+      chair(m, x + sx, 3.2, 1, chairCol);
+    }
+  }
+  // charpais out front, some with a plank table across
+  charpai(m, -4.6, -2.4, false, true);
+  charpai(m, -1.6, -2.9, true, false);
+  charpai(m, 1.6, -2.4, false, true);
+  charpai(m, 4.4, -3.1, true, true);
+  // steel water cooler with taps on a stand at the side
+  m.box(0.9, 0.9, 0.55, STEEL, { p: [-6.9, 1.2, 3.2] });
+  for (const sx of [-0.25, 0, 0.25]) m.cyl(0.02, 0.02, 0.1, 4, 0x8a8e92, { p: [-6.9 + sx, 0.95, 2.9], r: [Math.PI / 2, 0, 0] });
+  for (const sx of [-0.4, 0.4]) for (const sz of [-0.22, 0.22]) m.box(0.04, 0.75, 0.04, 0x5a5f66, { p: [-6.9 + sx, 0.37, 3.2 + sz] });
+}
+
+/** cycle-style cart wheel: rim, tyre, hub and spokes, axle along x */
+function cartWheel(m: ModelBuilder, x: number, z: number, rad: number) {
+  m.torus(rad, 0.035, 6, 18, 0x2a2a2a, { p: [x, rad, z], r: [0, Math.PI / 2, 0] });
+  m.cyl(0.05, 0.05, 0.1, 8, 0x8a8a8a, { p: [x, rad, z], r: [0, 0, Math.PI / 2] });
+  for (let k = 0; k < 6; k++) m.box(0.015, rad * 2 - 0.05, 0.015, 0xa8a8a8, { p: [x, rad, z], r: [(k * Math.PI) / 6, 0, 0] });
 }
 
 function buildTapri(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, out: PropOut) {
   const kind = site.variant!.startsWith('coconut') ? 'coconut' : site.variant!.startsWith('sugarcane') ? 'sugarcane' : 'tapri';
   if (kind === 'tapri') {
-    // tarp roof on poles, a stove with a kettle, steel glasses, a bench
-    for (const [x, z] of [[-1.6, -1], [1.6, -1], [-1.6, 1.4], [1.6, 1.4]]) m.box(0.1, 2.3, 0.1, 0x6a5a4a, { p: [x, 1.15, z] });
-    m.box(3.8, 0.06, 3, r.pick([0x2a5ab8, 0xe8742a, 0x2a8a5a]), { p: [0, 2.35, 0.2], r: [0.08, 0, 0] });
-    m.box(2.4, 0.9, 0.7, 0x8a6448, { p: [0, 0.45, -0.9] });
-    m.cyl(0.18, 0.2, 0.15, 8, 0x3a3a3a, { p: [-0.5, 0.97, -0.9] });
-    g.cyl(0.12, 0.12, 0.02, 8, 0x5ab8ff, { p: [-0.5, 1.05, -0.9] });
-    m.sphere(0.16, 8, 6, 0xc8ccd0, { p: [-0.5, 1.2, -0.9], s: [1, 0.8, 1] });
-    m.cyl(0.03, 0.03, 0.18, 4, 0xc8ccd0, { p: [-0.33, 1.25, -0.9], r: [0, 0, -0.8] });
-    for (let i = 0; i < 6; i++) m.cyl(0.035, 0.03, 0.09, 6, 0xd8dce0, { p: [0.2 + i * 0.1, 0.95, -0.95] });
-    m.box(2, 0.08, 0.4, 0x6a4a34, { p: [0, 0.45, -2.6] });
-    const sm = signMesh('CHAI\nCUTTING ½', 1.2, 0.6, '#f2c230', '#1a1a1a');
-    sm.position.set(1.2, 1.9, -1.05);
+    // tea stall: a tin roof (part covered by a tarp) on bamboo poles over a wooden counter; tea
+    // boiling in a wide pan on a stove, a blue water drum with a tap, glass jars of rusks and
+    // biscuits, strips of snack packets hanging from the roof edge, a bench and a stool
+    const BAMBOO = 0xb89a5a;
+    for (const [x, z] of [[-1.7, -1.2], [1.7, -1.2], [-1.7, 1.3], [1.7, 1.3]]) {
+      m.cyl(0.05, 0.055, 2.4, 6, BAMBOO, { p: [x, 1.2, z] });
+      for (const y of [0.6, 1.3, 2.0]) m.cyl(0.062, 0.062, 0.04, 6, 0x9a7c44, { p: [x, y, z] });
+    }
+    m.box(4, 0.04, 3.1, TIN, { p: [0, 2.4, 0.05], r: [-0.1, 0, 0] });
+    for (let i = 0; i < 9; i++) m.box(0.035, 0.025, 3.1, 0x7a8488, { p: [-1.8 + i * 0.45, 2.43, 0.05], r: [-0.1, 0, 0] });
+    m.box(2.6, 0.03, 2.2, r.pick([0x2a5ab8, 0xe8742a, 0x2a8a5a]), { p: [0.6, 2.47, 0.5], r: [-0.1, 0, 0.03] });
+    // counter: plank top over a boarded front
+    m.box(2.4, 0.86, 0.7, WOOD, { p: [0, 0.43, -0.9] });
+    m.box(2.5, 0.05, 0.78, 0x9a7450, { p: [0, 0.885, -0.9] });
+    for (let i = 0; i < 4; i++) m.box(0.02, 0.8, 0.01, WOOD_DARK, { p: [-0.9 + i * 0.6, 0.43, -1.255] });
+    // stove and the pan of tea, a steel kettle beside it
+    m.box(0.4, 0.12, 0.35, 0x2a2a2a, { p: [-0.6, 0.97, -0.85] });
+    g.cyl(0.13, 0.13, 0.02, 10, 0x5ab8ff, { p: [-0.6, 1.04, -0.85] });
+    m.cyl(0.24, 0.2, 0.18, 12, 0xb8bcc0, { p: [-0.6, 1.14, -0.85] });
+    m.cyl(0.22, 0.22, 0.01, 12, 0xc8945a, { p: [-0.6, 1.22, -0.85] });
+    m.cyl(0.12, 0.15, 0.22, 10, STEEL, { p: [-0.05, 1.02, -0.75] });
+    m.cyl(0.025, 0.025, 0.18, 4, STEEL, { p: [0.1, 1.08, -0.75], r: [0, 0, -0.9] });
+    // steel glasses, glass jars with coloured lids
+    for (let i = 0; i < 6; i++) m.cyl(0.035, 0.03, 0.09, 6, 0xd8dce0, { p: [0.25 + i * 0.09, 0.955, -1.1] });
+    for (let i = 0; i < 4; i++) {
+      const x = 0.3 + i * 0.22;
+      m.cyl(0.08, 0.08, 0.2, 8, 0xd8e8e8, { p: [x, 1.01, -0.75] });
+      m.cyl(0.065, 0.065, 0.12, 8, [0xd8a050, 0xc87a3a, 0xe8c87a, 0xb8603a][i], { p: [x, 0.98, -0.75] });
+      m.cyl(0.085, 0.085, 0.03, 8, [0xc8302a, 0xf2c230, 0x2a8a5a, 0x2a5ab8][i], { p: [x, 1.12, -0.75] });
+    }
+    // blue water drum with a tap at the end of the counter
+    m.cyl(0.28, 0.28, 0.75, 12, 0x2a5ab8, { p: [1.55, 0.375, -0.75] });
+    m.cyl(0.02, 0.02, 0.1, 4, 0x8a8e92, { p: [1.55, 0.2, -1.05], r: [Math.PI / 2, 0, 0] });
+    // snack packets in strips hanging from the front edge of the roof
+    const PACK = [0xe8302a, 0xf2c230, 0x2a8a5a, 0x2a5ab8, 0xe8742a, 0xc83a8a];
+    for (let s = 0; s < 6; s++)
+      for (let k = 0; k < 5; k++) m.box(0.13, 0.15, 0.02, PACK[(s + k) % PACK.length], { p: [-1.5 + s * 0.24, 2.12 - k * 0.17, -1.42] });
+    // bench to one side, a plastic stool
+    m.box(0.36, 0.06, 1.8, 0x7a5a3a, { p: [2.7, 0.45, -0.5] });
+    for (const z of [-1.2, 0.2]) m.box(0.3, 0.42, 0.06, WOOD_DARK, { p: [2.7, 0.21, z] });
+    m.cyl(0.16, 0.19, 0.42, 8, 0xc8302a, { p: [-2.3, 0.21, -1.5] });
+    const sm = signMesh('CHAI\nCUTTING ½', 1.0, 0.5, '#f2c230', '#1a1a1a');
+    sm.position.set(0.9, 1.95, -1.42);
     sm.rotation.y = Math.PI;
     out.extras.push(sm);
   } else if (kind === 'coconut') {
-    // a hand cart piled with green tender coconuts, and a stool
-    m.box(2.2, 0.6, 1.2, 0x8a6448, { p: [0, 0.8, -0.6] });
-    for (const x of [-0.9, 0.9]) m.cyl(0.4, 0.4, 0.08, 10, 0x3a3a3a, { p: [x, 0.4, -0.6], r: [0, 0, Math.PI / 2] });
-    for (let i = 0; i < 14; i++) m.sphere(0.18, 6, 5, i % 3 ? 0x5a9a3a : 0x7aaa4a, { p: [-0.8 + (i % 7) * 0.26, 1.25 + Math.floor(i / 7) * 0.22, -0.6 + ((i * 7) % 3 - 1) * 0.2] });
-    m.box(0.5, 0.45, 0.5, 0x6a4a34, { p: [1.6, 0.22, 0] });
+    // tender-coconut cart: a wooden handcart on two cycle wheels heaped with green coconuts, a
+    // chopping block with a cut one and a machete, a stool, and a big umbrella over it all
+    m.box(2.0, 0.1, 1.1, WOOD, { p: [0, 0.85, -0.6] });
+    for (const s of [-1, 1]) {
+      m.box(2.0, 0.18, 0.05, WOOD_DARK, { p: [0, 0.98, -0.6 + s * 0.53] });
+      m.box(0.05, 0.18, 1.1, WOOD_DARK, { p: [s * 0.98, 0.98, -0.6] });
+      cartWheel(m, s * 0.62, -0.6, 0.36);
+      beam(m, [s * 0.4, 0.86, -0.05], [s * 0.4, 0.78, 0.9], 0.05, 0.05, WOOD_DARK); // handles
+    }
+    beam(m, [0, 0.82, -1.1], [0, 0, -1.2], 0.06, 0.06, WOOD_DARK); // prop leg
+    const GREENS = [0x5a9a3a, 0x6aa848, 0x4f8a34, 0x7aaa4a];
+    let n = 0;
+    for (const [cols, rows, y] of [[6, 3, 1.04], [5, 2, 1.28], [3, 1, 1.5]] as const)
+      for (let i = 0; i < cols; i++)
+        for (let j = 0; j < rows; j++)
+          m.sphere(0.15, 7, 5, GREENS[n++ % 4], { p: [-0.75 + (i + (6 - cols) / 2) * 0.3, y, -0.6 + (j - (rows - 1) / 2) * 0.3], s: [1, 1.15, 1] });
+    m.cyl(0.25, 0.28, 0.45, 10, 0x7a5a3a, { p: [1.45, 0.22, -0.9] });
+    m.sphere(0.15, 7, 5, 0x6aa848, { p: [1.45, 0.6, -0.9], s: [1, 1.15, 1] });
+    m.cyl(0.07, 0.07, 0.01, 8, 0xf2f0e6, { p: [1.45, 0.77, -0.9] });
+    m.box(0.04, 0.015, 0.34, 0x9a9ea2, { p: [1.3, 0.46, -0.75], r: [0, 0.6, 0] });
+    m.cyl(0.16, 0.19, 0.4, 8, 0x2a5ab8, { p: [-1.6, 0.2, -1.4] });
+    beam(m, [-0.85, 0.85, -0.2], [-0.85, 2.5, -0.2], 0.04, 0.04, 0x5a5f66);
+    m.cone(1.4, 0.45, 8, r.pick([0xe8302a, 0xf2c230, 0x2a5ab8]), { p: [-0.85, 2.65, -0.2] });
     const sm = signMesh('TENDER\nCOCONUT', 1.2, 0.6, '#2a8a5a', '#ffffff');
     sm.position.set(0, 1.9, -1.25);
     sm.rotation.y = Math.PI;
     out.extras.push(sm);
-    m.box(0.06, 1.2, 0.06, 0x6a4a34, { p: [0, 1.4, -1.2] });
+    m.box(0.06, 1.2, 0.06, WOOD_DARK, { p: [0, 1.4, -1.2] });
   } else {
-    // sugarcane juice cart: a crusher wheel, a bundle of canes, glasses
-    m.box(2.4, 0.9, 1.2, 0xe8e2d0, { p: [0, 0.75, -0.6] });
-    for (const x of [-1, 1]) m.cyl(0.4, 0.4, 0.08, 10, 0x3a3a3a, { p: [x, 0.4, -0.6], r: [0, 0, Math.PI / 2] });
-    m.cyl(0.5, 0.5, 0.15, 14, 0x3a3a3a, { p: [-0.6, 1.6, -0.6], r: [Math.PI / 2, 0, 0] });
-    for (let i = 0; i < 9; i++) m.cyl(0.03, 0.03, 2.4, 4, i % 2 ? 0x8aa04a : 0x7a8a3a, { p: [0.8 + (i % 3) * 0.08, 1.4, -0.4 + Math.floor(i / 3) * 0.08], r: [0, 0, 0.15] });
-    for (let i = 0; i < 4; i++) m.cyl(0.04, 0.035, 0.12, 6, 0xc8d870, { p: [-0.1 + i * 0.12, 1.26, -0.95] });
+    // sugarcane-juice cart: a painted handcart carrying the crusher (steel rollers in an iron frame
+    // turned by a big spoked flywheel), a spout over a steel tray, glasses of juice, a painted canopy
+    // edged with bells on two poles, cane stalks leaning on the side, a bucket of crushed stalks
+    const paint = r.pick([0xf2c230, 0x2a8a5a, 0xe8742a]);
+    m.box(2.4, 0.12, 1.2, paint, { p: [0, 0.82, -0.6] });
+    m.box(2.4, 0.4, 1.16, 0xe8e2d0, { p: [0, 0.56, -0.6] });
+    m.box(2.42, 0.08, 1.18, paint, { p: [0, 0.4, -0.6] });
+    for (const s of [-1, 1]) {
+      cartWheel(m, s * 0.66, -0.6, 0.36);
+      beam(m, [s * 1.1, 0.9, -1.15], [s * 1.1, 2.45, -1.15], 0.05, 0.05, 0x5a5f66);
+    }
+    m.box(0.6, 0.6, 0.5, 0x2a2a2a, { p: [-0.4, 1.18, -0.55] });
+    for (const sx of [-0.15, 0, 0.15]) m.cyl(0.07, 0.07, 0.35, 8, STEEL, { p: [-0.4 + sx, 1.62, -0.55] });
+    m.cyl(0.28, 0.28, 0.06, 12, 0x3a3a3a, { p: [-0.4, 1.83, -0.55] });
+    m.torus(0.55, 0.04, 6, 20, 0x2a2a2a, { p: [-0.85, 1.32, -0.55], r: [0, Math.PI / 2, 0] });
+    for (let k = 0; k < 6; k++) m.box(0.03, 1.08, 0.03, 0x3a3a3a, { p: [-0.85, 1.32, -0.55], r: [(k * Math.PI) / 6, 0, 0] });
+    m.cyl(0.03, 0.03, 0.3, 6, 0x9a9ea2, { p: [-0.98, 1.6, -0.55], r: [0, 0, Math.PI / 2] }); // crank handle
+    m.box(0.12, 0.04, 0.3, STEEL, { p: [-0.4, 0.95, -0.95], r: [0.4, 0, 0] }); // spout
+    m.box(0.7, 0.04, 0.4, STEEL, { p: [0.25, 0.9, -0.9] });
+    for (let i = 0; i < 4; i++) m.cyl(0.04, 0.035, 0.12, 6, 0xc8d870, { p: [0.0 + i * 0.15, 0.98, -0.95] });
+    m.box(2.8, 0.05, 1.6, paint, { p: [0, 2.48, -0.6] });
+    for (let i = 0; i < 9; i++) m.sphere(0.04, 6, 4, 0xd8b048, { p: [-1.3 + i * 0.325, 2.4, -1.42] });
+    // cane stalks stood on end, leaning on the cart's far end
+    for (let i = 0; i < 12; i++) m.cyl(0.025, 0.03, 2.3, 5, i % 3 ? 0x8aa04a : 0x6a4a5a, { p: [1.4 + (i % 4) * 0.05, 1.14, -0.85 + Math.floor(i / 4) * 0.08], r: [0, 0, 0.1] });
+    m.cyl(0.22, 0.18, 0.4, 10, 0x5a5f66, { p: [1.6, 0.2, -1.4] });
+    m.cyl(0.2, 0.2, 0.06, 10, 0xd8d0a0, { p: [1.6, 0.38, -1.4] });
     const sm = signMesh('GANNE KA RAS\nSUGARCANE JUICE', 1.6, 0.6, '#f2c230', '#2a5a2a');
-    sm.position.set(0, 2.3, -1.25);
+    sm.position.set(0.5, 2.15, -1.45);
     sm.rotation.y = Math.PI;
     out.extras.push(sm);
-    m.box(0.06, 1.6, 0.06, 0x6a4a34, { p: [0, 1.5, -1.2] });
   }
 }
 

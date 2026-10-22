@@ -2,6 +2,7 @@
 // Every model is authored in local space: origin on the ground, -z faces the road.
 import * as THREE from 'three';
 import { ModelBuilder } from './models';
+import { arch, Greenhouse, profile, wheel } from './carKit';
 import { toon, shared } from './toon';
 import type { Site } from '../world/sites';
 import type { World } from '../world/world';
@@ -257,12 +258,43 @@ const B: Record<string, Builder> = {
     m.cyl(1.2, 1.2, 0.6, 12, 0xd9573a, { p: [0, 5, -2.6], r: [Math.PI / 2, 0, 0] });
   },
   oldcar: (m) => {
-    const rust = 0x9a5a3a;
-    m.box(1.8, 0.7, 4, rust, { p: [0, 0.55, 0], r: [0, 0, 0.08] });
-    m.box(1.5, 0.6, 2, 0x7a4a2a, { p: [0, 1.15, 0.3], r: [0, 0, 0.08] });
-    for (const [x, z] of [[-0.8, -1.3], [0.8, -1.3], [-0.8, 1.3], [0.8, 1.3]]) m.cyl(0.32, 0.32, 0.22, 8, 0x2a2a2a, { p: [x, 0.22, z], r: [0, 0, Math.PI / 2], s: [1, 1, 0.7] });
-    m.cone(0.3, 0.8, 4, 0x6f9a50, { p: [0.4, 1.4, -0.4] });
-    m.cone(0.2, 0.6, 4, 0x7fa85a, { p: [-0.5, 1.0, 1.5] });
+    // an abandoned 1950s-style sedan: rounded humped bonnet, round headlamps either side of a chrome
+    // grille, a short rounded boot; dusty paint with rust patches, one tyre flat, weeds round it
+    const dust = 0xd8d2c2, rust = 0x9a5a3a, chrome = 0xa8a49a, glass = 0x5a6670;
+    const sill = 0.3, wy = 0.32, wz = 1.35;
+    profile(m, [[-2.05, sill], ...arch(-wz, sill, wy, 0.42), ...arch(wz, sill, wy, 0.42), [2.05, sill], [2.15, 0.46], [2.15, 0.72], [2.06, 0.86], [1.78, 0.95], [1.38, 0.98],
+      [-0.8, 0.99], [-1.3, 0.98], [-1.75, 0.92], [-2.06, 0.8], [-2.18, 0.62], [-2.18, 0.46]], 1.7, dust);
+    const gh = new Greenhouse({ belt: 0.98, roof: 1.56, wsBase: -0.8, wsTop: -0.3, rwTop: 0.85, rwBase: 1.38, hb: 0.8, hr: 0.7 });
+    gh.shell(m, dust);
+    gh.frontRearGlass(m, glass);
+    gh.sideGlass(m, glass, [0.28]);
+    // round headlamps on the wings, the grille between them, chrome bumpers
+    for (const s of [-1, 1]) {
+      m.cyl(0.12, 0.12, 0.08, 12, chrome, { p: [s * 0.62, 0.74, -2.15], r: [Math.PI / 2, 0, 0] });
+      m.cyl(0.09, 0.09, 0.02, 12, 0x8a9096, { p: [s * 0.62, 0.74, -2.2], r: [Math.PI / 2, 0, 0] });
+      m.box(0.2, 0.08, 0.04, 0xd88a3a, { p: [s * 0.62, 0.55, -2.19] }); // indicator
+    }
+    m.box(0.8, 0.28, 0.04, 0x3a3a38, { p: [0, 0.66, -2.19] });
+    for (let i = 0; i < 5; i++) m.box(0.78, 0.025, 0.02, chrome, { p: [0, 0.55 + i * 0.055, -2.21] });
+    for (const z of [-2.24, 2.22]) m.box(1.74, 0.12, 0.1, chrome, { p: [0, 0.42, z] });
+    m.box(0.5, 0.12, 0.02, 0xe8e2c8, { p: [0, 0.3, -2.25] });
+    for (const s of [-1, 1]) m.box(0.12, 0.16, 0.03, 0x8a2a20, { p: [s * 0.65, 0.68, 2.16] });
+    // rust and dirt
+    m.box(0.9, 0.012, 0.6, rust, { p: [0.2, 1.0, -1.4], r: [0.04, 0, 0] });
+    m.box(0.012, 0.25, 0.7, rust, { p: [0.856, 0.45, 0.4] });
+    m.box(0.012, 0.2, 0.5, rust, { p: [-0.856, 0.42, -1.0] });
+    m.box(0.012, 0.18, 0.5, 0x8a7a62, { p: [-0.856, 0.5, 1.4] });
+    // wheels: front right is flat, so it sits low and bulges
+    for (const [x, z] of [[-0.76, -wz], [0.76, -wz], [-0.76, wz], [0.76, wz]]) {
+      const flat = x > 0 && z < 0;
+      wheel(m, x, flat ? 0.24 : wy, z, wy, 0.2, 0x9a968a, 12);
+      if (flat) m.box(0.22, 0.06, 0.5, 0x1e1e1e, { p: [x, 0.03, z] });
+    }
+    // weeds growing round it
+    for (const [x, z, h] of [[0.95, -0.9, 0.6], [-0.95, 1.7, 0.45], [0.2, 2.35, 0.5], [-1.0, -1.9, 0.4], [1.05, 1.1, 0.35]]) {
+      m.cone(0.22, h, 5, 0x6f9a50, { p: [x, h / 2, z] });
+      m.cone(0.16, h * 0.8, 5, 0x7fa85a, { p: [x + 0.15, h * 0.4, z + 0.1] });
+    }
   },
   phonebooth: (m, g) => {
     m.box(1.1, 2.5, 1.1, 0x3a6a8a, { p: [0, 1.25, 0] });

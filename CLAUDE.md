@@ -54,7 +54,7 @@ Drive the game by running JavaScript in the page through the debug globals set i
 ## Conventions
 
 - Traffic keeps left and the player car is right-hand drive (the driver's door is on the right). Lane offset is `LANE` in `world/world.ts`.
-- The India layer sits behind `FEATURES.india` (`core/features.ts`). Every addition to it follows the stereotype checklist in `REFERENCES.md`. All signs, slogans, names, shop names and dialogue are original, and paint names describe a colour or car type rather than a brand.
+- The India layer sits behind `FEATURES.india` (`core/features.ts`). Every addition to it follows the stereotype checklist in `REFERENCES.md`. Place and business names are real, not invented: real towns on kilometre stones, real fuel brands and dealer names, well-known dhabas, highway restaurant chains and tourist complexes (lists in `world/sites.ts` and `stops/stopModels.ts`). Each kind walks its list with `cycle()` (`world/prng.ts`) so neighbouring stops never share a name. Slogans, ghat rhymes and dialogue stay original, and paint names describe a colour or car type.
 - Known gaps against the original spec are listed at the end of `README.md`; read them before "fixing" behaviour that is deliberately unfinished.
 - Formatting follows `.editorconfig`: two-space indent, LF line endings, UTF-8. Node 22 (`.nvmrc`).
 

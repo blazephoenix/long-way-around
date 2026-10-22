@@ -34,6 +34,17 @@ export function hash01(...xs: number[]): number {
 }
 
 /** mulberry32 generator. */
+/**
+ * The i-th entry of a pool, stepping through it in a scrambled but fixed order: consecutive i never
+ * repeat until the whole pool has been used. offset varies the starting point.
+ */
+export function cycle<T>(pool: readonly T[], i: number, offset = 0): T {
+  const n = pool.length;
+  let step = 1;
+  for (const c of [7, 5, 3, 2]) if (n % c !== 0 && c < n) { step = c; break; }
+  return pool[(((offset + i * step) % n) + n) % n];
+}
+
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return function () {

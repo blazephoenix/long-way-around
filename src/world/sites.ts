@@ -2,7 +2,7 @@
 // overlook, stand, toll), landmarks, quirky roadside things, towns and city blocks.
 // Pure data, computed from the seed + main road only, so the worker and main thread agree.
 import { World, CHUNK, ROAD_HALF, Branch } from './world';
-import { hashInts, Rng, SYS } from './prng';
+import { cycle, hashInts, Rng, SYS } from './prng';
 import type { BiomeId } from '../../data/biomes';
 import { FEATURES } from '../core/features';
 
@@ -41,6 +41,13 @@ export interface Site {
   rare?: boolean;
 }
 
+/** spacing of each stop kind's placement cells along the road (diners and motels share one) */
+export const STOP_CELL: Record<StopKind, number> = { gas: 5500, diner: 8200, motel: 8200, overlook: 3400, stand: 2600, toll: 23000 };
+/** which placement cell a stop came from: consecutive stops of a kind have consecutive indices */
+export function stopIndex(site: Site): number {
+  return Math.floor(site.s / (STOP_CELL[site.kind as StopKind] ?? 5000));
+}
+
 const PRIORITY: Record<StopKind, number> = { gas: 5, diner: 4, motel: 4, toll: 3, overlook: 2, stand: 1 };
 const SPACING = 480;
 
@@ -59,11 +66,11 @@ function stopCandidates(world: World, s0: number, s1: number): Cand[] {
       if (c) out.push(c);
     }
   };
-  cell(5500, 1700, 750, 1, 1, (s, r) => ({ kind: 'gas', s, side: r.chance(0.8) ? 1 : -1, seed: r.int(0, 1e9) }));
-  cell(8200, 4300, 1500, 0.85, 2, (s, r) => ({ kind: r.chance(0.55) ? 'diner' : 'motel', s, side: r.chance(0.7) ? 1 : -1, seed: r.int(0, 1e9) }));
-  cell(3400, 900, 900, 0.6, 3, (s, r) => ({ kind: 'overlook', s, side: r.chance(0.5) ? 1 : -1, seed: r.int(0, 1e9) }));
-  cell(2600, 300, 700, 0.5, 4, (s, r) => ({ kind: 'stand', s, side: r.chance(0.7) ? 1 : -1, seed: r.int(0, 1e9) }));
-  cell(23000, 12000, 4000, 0.55, 5, (s, r) => ({ kind: 'toll', s, side: 1, seed: r.int(0, 1e9) }));
+  cell(STOP_CELL.gas, 1700, 750, 1, 1, (s, r) => ({ kind: 'gas', s, side: r.chance(0.8) ? 1 : -1, seed: r.int(0, 1e9) }));
+  cell(STOP_CELL.diner, 4300, 1500, 0.85, 2, (s, r) => ({ kind: r.chance(0.55) ? 'diner' : 'motel', s, side: r.chance(0.7) ? 1 : -1, seed: r.int(0, 1e9) }));
+  cell(STOP_CELL.overlook, 900, 900, 0.6, 3, (s, r) => ({ kind: 'overlook', s, side: r.chance(0.5) ? 1 : -1, seed: r.int(0, 1e9) }));
+  cell(STOP_CELL.stand, 300, 700, 0.5, 4, (s, r) => ({ kind: 'stand', s, side: r.chance(0.7) ? 1 : -1, seed: r.int(0, 1e9) }));
+  cell(STOP_CELL.toll, 12000, 4000, 0.55, 5, (s, r) => ({ kind: 'toll', s, side: 1, seed: r.int(0, 1e9) }));
   return out;
 }
 
@@ -158,12 +165,17 @@ function landmarksFor(b: BiomeId): [LandmarkKind, number][] {
   return FEATURES.india ? [...LANDMARKS[b], ...(LANDMARKS_IN[b] ?? [])] : LANDMARKS[b];
 }
 
-// invented town names for kilometre stones
-const TP = ['Kanna', 'Pathra', 'Chandra', 'Sona', 'Mela', 'Hari', 'Neela', 'Kaveri', 'Gopal', 'Shanti', 'Tara', 'Belu', 'Kodi', 'Mangal', 'Vela', 'Siri', 'Amba', 'Dhara', 'Pala', 'Mohan', 'Lakshmi', 'Jamun', 'Nimba', 'Ratna'];
-const TS = ['pura', 'gadh', 'palli', 'kere', 'nagar', 'pur', 'wadi', 'halli', 'ganj', 'kote', 'patti', 'ur', 'gaon', 'bari', 'kund', 'sar'];
-export function townName(seed: number, k: number): string {
-  const h = hashInts(seed, SYS.name, k);
-  return (TP[h % TP.length] + TS[(h >>> 8) % TS.length]).toUpperCase();
+// real towns for kilometre stones, from the region each biome draws on
+const TOWNS: Record<BiomeId, string[]> = {
+  forest: ['SHILLONG', 'SOHRA', 'MAWSYNRAM', 'NONGPOH', 'JOWAI', 'DAWKI', 'NONGSTOIN', 'MAIRANG', 'MAWPHLANG', 'UMIAM', 'MAWLYNNONG'],
+  coast: ['RATNAGIRI', 'GANAPATIPULE', 'MALVAN', 'VENGURLA', 'KARWAR', 'GOKARNA', 'HONNAVAR', 'BHATKAL', 'UDUPI', 'KUNDAPURA', 'KASARAGOD', 'KANNUR', 'KOZHIKODE', 'ALAPPUZHA', 'VARKALA'],
+  desert: ['JAISALMER', 'POKARAN', 'BARMER', 'BIKANER', 'PHALODI', 'OSIAN', 'NAGAUR', 'KHURI', 'RAMGARH', 'MANDAWA', 'JHUNJHUNU', 'CHURU'],
+  farm: ['KARNAL', 'PANIPAT', 'AMBALA', 'KURUKSHETRA', 'LUDHIANA', 'KHANNA', 'RAJPURA', 'PHAGWARA', 'JALANDHAR', 'MOGA', 'SANGRUR', 'BATHINDA', 'SAMRALA'],
+  tropical: ['OOTY', 'COONOOR', 'KOTAGIRI', 'GUDALUR', 'MUNNAR', 'DEVIKULAM', 'ADIMALI', 'VALPARAI', 'MADIKERI', 'SAKLESHPUR', 'KODAIKANAL'],
+  city: ['PUNE', 'NASHIK', 'MYSURU', 'NAGPUR', 'INDORE', 'BHOPAL', 'LUCKNOW', 'KANPUR', 'VADODARA', 'SURAT', 'COIMBATORE', 'MADURAI'],
+};
+export function townName(seed: number, k: number, biome: BiomeId): string {
+  return cycle(TOWNS[biome], k, seed % 97);
 }
 
 /** original, punny road-safety rhymes for hill roads (all invented) */
@@ -296,7 +308,7 @@ function indiaRoad(world: World, out: Site[], c: number, biome: BiomeId) {
     out.push({
       id: zero ? `ms0:${k}` : `ms:${k}`, kind: zero ? 'milestone0' : 'milestone', cat: 'landmark',
       x: r.x + r.nx * u, z: r.z + r.nz * u, s, side: 1, heading: Math.atan2(-r.tx, -r.tz), clear: 1.5, biome,
-      text: `${nh ? 'NH' : 'SH'} ${roadNo}|${townName(world.seed, Math.floor(k / 7) + (zero ? 0 : 1))}|${dist}`,
+      text: `${nh ? 'NH' : 'SH'} ${roadNo}|${townName(world.seed, Math.floor(k / 7) + (zero ? 0 : 1), biome)}|${dist}`,
       color: nh ? 0xf2c230 : 0x2f8a4a,
     });
   }
