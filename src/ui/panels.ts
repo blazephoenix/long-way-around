@@ -143,11 +143,11 @@ export class Panels {
   diner(site: Site) {
     const g = this.g;
     const dhaba = site.variant?.startsWith('dhaba');
-    this.open(siteName(site), dhaba ? 'Highway dhaba' : 'Diner', (el) => {
+    this.open(siteName(site), dhaba ? 'Highway dhaba' : 'Highway restaurant', (el) => {
       const next = nextWindowHour(g.hour);
-      el.append(h('p', {}, `It's ${fmtHour(g.hour)}. ${dhaba ? 'Chai' : 'Coffee'} and a sit-down until the light changes (${fmtHour(next % 24)}).`));
+      el.append(h('p', {}, `It's ${fmtHour(g.hour)}. ${dhaba ? 'Chai' : 'Chai or coffee'} and a sit-down until the light changes (${fmtHour(next % 24)}).`));
       el.append(h('div', { class: 'row' },
-        h('button', { class: 'btn primary', id: 'btn-coffee', disabled: !g.player.canAfford(ECON.coffee), onclick: () => { if (g.player.spend(ECON.coffee)) { this.close(); g.skipTo(next); g.events.emit('subtitle', { who: dhaba ? 'Cook' : 'Cook', text: lines('dinerBye', site, g) }); } } }, `${dhaba ? 'Chai' : 'Coffee'} · ${this.m(ECON.coffee)}`),
+        h('button', { class: 'btn primary', id: 'btn-coffee', disabled: !g.player.canAfford(ECON.coffee), onclick: () => { if (g.player.spend(ECON.coffee)) { this.close(); g.skipTo(next); g.events.emit('subtitle', { who: dhaba ? 'Cook' : 'Cook', text: lines('dinerBye', site, g) }); } } }, `${dhaba ? 'Chai' : 'Chai and a samosa'} · ${this.m(ECON.coffee)}`),
         dhaba ? h('button', { class: 'btn', disabled: !g.player.canAfford(ECON.motel), onclick: () => { if (g.player.spend(ECON.motel)) { this.close(); g.skipTo(dawnAfter(g.hour)); } } }, `Full meal, then a nap on the charpai · ${this.m(ECON.motel)}`) : null,
       ));
       el.append(h('p', { class: 'muted' }, 'No timers anywhere. Skipping time only changes the light.'));
@@ -157,7 +157,7 @@ export class Panels {
 
   motel(site: Site) {
     const g = this.g;
-    this.open(siteName(site), 'Motel', (el) => {
+    this.open(siteName(site), 'Tourist complex', (el) => {
       el.append(h('p', {}, `A clean room and a quiet night. You wake at first light (${fmtHour(dawnAfter(g.hour) % 24)}).`));
       el.append(h('div', { class: 'row' },
         h('button', { class: 'btn primary', id: 'btn-motel', disabled: !g.player.canAfford(ECON.motel), onclick: () => { if (g.player.spend(ECON.motel)) { this.close(); g.skipTo(dawnAfter(g.hour)); } } }, `Stay the night · ${this.m(ECON.motel)}`),

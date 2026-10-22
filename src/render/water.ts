@@ -15,7 +15,7 @@ import type { WaterArrays } from '../world/waterGeo';
 export type WaterKind = 'lake' | 'river' | 'sea' | 'ocean';
 
 /** Lighting shared by every water material; updateWaterLight() fills it from the sky each frame. */
-const light = {
+export const waterLight = {
   uSky: { value: new THREE.Color(0xa9c4c8) },
   uLight: { value: 1 },
 };
@@ -184,7 +184,7 @@ export function waterMaterial(kind: WaterKind, water: number, deep: number): THR
     side: THREE.DoubleSide,
     uniforms: {
       ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
-      ...light,
+      ...waterLight,
       uTime: shared.time,
       uBase: { value: baseColour(kind, water, deep) },
       uFoam: { value: k.foam },
@@ -211,6 +211,6 @@ export function waterGeometry(w: WaterArrays): THREE.BufferGeometry {
 
 /** Feed the sky's key light into every water material (call once per frame). */
 export function updateWaterLight(sun: THREE.DirectionalLight, hemiIntensity: number, horizon: THREE.Color) {
-  light.uSky.value.copy(horizon);
-  light.uLight.value = THREE.MathUtils.clamp(0.28 + sun.intensity * 0.32 + hemiIntensity * 0.3, 0.25, 1.15);
+  waterLight.uSky.value.copy(horizon);
+  waterLight.uLight.value = THREE.MathUtils.clamp(0.28 + sun.intensity * 0.32 + hemiIntensity * 0.3, 0.25, 1.15);
 }

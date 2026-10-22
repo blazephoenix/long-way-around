@@ -5,8 +5,8 @@ import { CHUNK } from '../world/world';
 
 const ICON: Record<string, { c: string; g: string; label: string }> = {
   gas: { c: '#d9573a', g: 'F', label: 'Fuel, shop, photo kiosk' },
-  diner: { c: '#e8a03a', g: 'D', label: 'Diner / dhaba' },
-  motel: { c: '#6a5aa8', g: 'M', label: 'Motel' },
+  diner: { c: '#e8a03a', g: 'D', label: 'Restaurant / dhaba' },
+  motel: { c: '#6a5aa8', g: 'M', label: 'Tourist complex' },
   overlook: { c: '#3a7a5a', g: 'V', label: 'Scenic overlook' },
   bench: { c: '#3a7a5a', g: 'V', label: 'Viewpoint' },
   stand: { c: '#a85a8a', g: 'S', label: 'Roadside stand' },

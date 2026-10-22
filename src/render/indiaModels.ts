@@ -10,6 +10,7 @@ import type { Site } from '../world/sites';
 import type { Rng } from '../world/prng';
 import { styleFor, buildDiner, buildStand, stopName, signText } from '../stops/stopModels';
 import { cycle } from '../world/prng';
+import { townName } from '../world/sites';
 
 const SAND = 0xd8b88a, SAND2 = 0xc8a070, SAND3 = 0xb8905e;
 
@@ -109,24 +110,52 @@ registerBuilder('breaker', (m, _g, s) => {
 
 // ---------------------------------------------------------------- toll plaza (spans the road)
 registerBuilder('toll', (m, g, s, _r, out) => {
-  void s;
-  // local x runs across the road: lanes at about ±1.85
-  m.box(14, 0.6, 10, 0xe8e2d4, { p: [0, 6.2, 0] });
-  m.box(14.2, 0.25, 10.2, 0x2f6a9a, { p: [0, 5.85, 0] });
-  g.box(13, 0.06, 9, 0xfff4d8, { p: [0, 5.7, 0] });
-  for (const x of [-6.5, 0, 6.5]) {
-    m.box(0.6, 6, 0.6, 0xc8c4b8, { p: [x, 3, -4] });
-    m.box(0.6, 6, 0.6, 0xc8c4b8, { p: [x, 3, 4] });
+  // a National Highways toll plaza: a long canopy with a blue fascia carrying the plaza's name,
+  // booths on a centre island and on islands either side, striped island noses, a signal light and
+  // a FASTag board over each lane, rumble strips on the approach. Local x runs across the road
+  // (lanes at about ±1.85), z along it.
+  const BLUE = 0x1d4a9a, CONCRETE = 0xd8d4c8, WHITE = 0xf2efe6;
+  m.box(17, 0.5, 9, 0xe8e2d4, { p: [0, 6.25, 0] });
+  for (const z of [-4.55, 4.55]) m.box(17.2, 0.9, 0.12, BLUE, { p: [0, 6.2, z] });
+  for (const x of [-8.55, 8.55]) m.box(0.12, 0.9, 9.2, BLUE, { p: [x, 6.2, 0] });
+  for (let i = 0; i < 4; i++) g.box(2.6, 0.04, 6, 0xfff4d8, { p: [-6 + i * 4, 5.98, 0] });
+  const name = `${townName(0, Math.floor(s.s / 23000), s.biome)} TOLL PLAZA`;
+  for (const z of [-4.62, 4.62]) {
+    const sign = signMesh(name, 9, 0.75, '#1d4a9a', '#ffffff');
+    sign.position.set(0, 6.2, z);
+    if (z < 0) sign.rotation.y = Math.PI;
+    out.extras.push(sign);
   }
-  // centre island with two booths
-  m.box(1.4, 0.25, 10, 0xd8d4c8, { p: [0, 0.12, 0] });
-  m.box(1.2, 2.4, 2, 0xf2efe6, { p: [0, 1.4, -1.5] });
-  m.box(1.2, 2.4, 2, 0xf2efe6, { p: [0, 1.4, 1.5] });
-  g.box(1.22, 0.8, 1.2, 0xffe2a0, { p: [0, 1.7, -1.5] });
-  g.box(1.22, 0.8, 1.2, 0xffe2a0, { p: [0, 1.7, 1.5] });
-  const sign = signMesh('TOLL PLAZA\nHAVE A GOOD JOURNEY', 7, 1.2, '#2f6a9a', '#ffffff');
-  sign.position.set(0, 7.3, 5.05);
-  out.extras.push(sign);
+  // islands: centre one between the two lanes, and one at each road edge
+  for (const x of [-4.6, 0, 4.6]) {
+    const w = x === 0 ? 1.4 : 1.6;
+    m.box(w, 0.25, 9, CONCRETE, { p: [x, 0.12, 0] });
+    // striped noses at both ends
+    for (const z of [-4.8, 4.8]) for (let k = 0; k < 4; k++) m.box(w, 0.6, 0.15, k % 2 ? 0x1a1a1a : 0xf2c230, { p: [x, 0.42, z + Math.sign(z) * (k * 0.15 - 0.2)] });
+    // tapered concrete columns carrying the canopy
+    for (const z of [-3.2, 3.2]) m.cyl(0.3, 0.38, 5.9, 10, 0xc8c4b8, { p: [x, 3.05, z] });
+  }
+  // booths: one per lane on the centre island, and one on each edge island
+  for (const [x, z] of [[0, -1.5], [0, 1.5], [-4.6, 1.5], [4.6, -1.5]]) {
+    m.box(1.2, 2.3, 1.9, WHITE, { p: [x, 1.4, z] });
+    m.box(1.4, 0.15, 2.1, BLUE, { p: [x, 2.62, z] });
+    g.box(1.22, 0.75, 1.2, 0xffe2a0, { p: [x, 1.75, z] });
+    m.box(0.5, 0.35, 0.3, 0xd8d8d8, { p: [x, 2.0, z + Math.sign(z) * 1.05] }); // air conditioner
+  }
+  // a signal and a FASTag board over each lane, facing the traffic that uses it
+  for (const lane of [-1, 1]) {
+    const x = lane * 1.85, z = lane * -4.0;
+    m.box(0.08, 0.6, 0.08, 0x3a3a3a, { p: [x, 5.7, z] });
+    m.box(0.35, 0.7, 0.2, 0x1a1a1a, { p: [x - 0.5, 5.3, z] });
+    g.sphere(0.1, 8, 6, 0x5aff7a, { p: [x - 0.5, 5.15, z + lane * -0.11] });
+    g.sphere(0.1, 8, 6, 0x401010, { p: [x - 0.5, 5.45, z + lane * -0.11] });
+    const tag = signMesh('FASTag\nLANE ' + (lane < 0 ? 1 : 2), 1.3, 0.7, '#2a8a4a', '#ffffff');
+    tag.position.set(x + 0.4, 5.3, z + lane * -0.06);
+    if (lane > 0) tag.rotation.y = Math.PI;
+    out.extras.push(tag);
+  }
+  // rumble strips on both approaches
+  for (const z of [-16, -15, -14, 14, 15, 16]) m.box(7.2, 0.03, 0.3, 0xf2f2ee, { p: [0, 0.02, z] });
   // boom barriers per lane (animated)
   for (const lane of [-1, 1]) {
     const piv = new THREE.Group();

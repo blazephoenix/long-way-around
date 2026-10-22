@@ -1,7 +1,7 @@
 // Stop buildings, styled per biome: timber (forest), coastal, adobe (desert), farm,
 // tropical, neon (city). Local space: origin at pad centre, -z faces the road.
 import * as THREE from 'three';
-import { registerBuilder, signMesh, PropOut } from '../render/props';
+import { registerBuilder, signMesh, cuspedArch, PropOut } from '../render/props';
 import type { ModelBuilder } from '../render/models';
 import { beam } from '../render/carKit';
 import { stopIndex, type Site } from '../world/sites';
@@ -155,31 +155,74 @@ export function buildGas(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, o
 }
 
 export function buildDiner(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, out: PropOut) {
+  // a highway food plaza: a glass-fronted hall under a deep fascia carrying the restaurant's name,
+  // a porch on round columns at the door, planters, tables with umbrellas out front, and marked
+  // parking bays by the road (the order point is at the door, 5.8 m along the front)
   const st = styleFor(site);
-  m.box(14, 3.8, 8, st.wall, { p: [0, 1.9, 6] });
-  m.box(14.6, 0.5, 8.6, st.roof, { p: [0, 4.0, 6] });
-  for (let i = 0; i < 5; i++) g.box(2, 1.4, 0.1, 0xffdca0, { p: [-5 + i * 2.5, 2.0, 1.95] });
-  m.box(1.4, 2.4, 0.12, st.trim, { p: [5.8, 1.2, 1.95] });
-  m.box(14.2, 0.35, 1.4, st.accent, { p: [0, 3.2, 1.3], r: [-0.25, 0, 0] });
-  for (const x of [-4, 0, 4]) {
-    m.cyl(0.6, 0.6, 0.08, 10, 0xe8e0cc, { p: [x, 0.8, -3] });
-    m.cyl(0.06, 0.06, 0.8, 5, 0x5a5f66, { p: [x, 0.4, -3] });
+  const WHITE = 0xeeeae2, GLASS = 0x2c3e50;
+  m.box(16, 4.4, 8, WHITE, { p: [0, 2.2, 6] });
+  m.box(16.4, 1.4, 0.5, st.accent, { p: [0, 4.9, 1.9] });
+  m.box(16.6, 0.3, 8.6, st.trim, { p: [0, 5.65, 6] });
+  for (let i = 0; i < 6; i++) {
+    const x = -6.7 + i * 2.5;
+    if (Math.abs(x - 5.8) < 1) continue;
+    m.box(2.3, 3.0, 0.08, GLASS, { p: [x, 1.6, 1.98] });
+    g.box(2.1, 2.6, 0.1, 0xffdca0, { p: [x, 1.6, 1.96] });
   }
-  addSign(out, signText(stopName(site, r)), st, 6, 1.6, 0, 5.4, 2.0);
+  for (let i = 0; i <= 6; i++) m.box(0.1, 3.2, 0.12, st.trim, { p: [-8 + i * 2.5 + 0.05, 1.6, 1.95] });
+  m.box(1.6, 2.6, 0.1, 0x3a4a5a, { p: [5.8, 1.3, 1.97] });
+  // porch over the door
+  m.box(4, 0.25, 3, WHITE, { p: [5.8, 3.4, 0.6] });
+  for (const x of [4.0, 7.6]) m.cyl(0.15, 0.15, 3.3, 10, WHITE, { p: [x, 1.65, -0.7] });
+  for (const x of [-7.4, 3.0, 8.6]) {
+    m.box(1.2, 0.6, 0.8, 0x9a948a, { p: [x, 0.3, 1.2] });
+    m.sphere(0.6, 8, 6, 0x4f8a3a, { p: [x, 0.95, 1.2] });
+  }
+  // tables with umbrellas
+  for (const x of [-5, -1.5]) {
+    m.cyl(0.5, 0.5, 0.06, 10, 0xe8e0cc, { p: [x, 0.75, -1.6] });
+    m.cyl(0.05, 0.05, 2.3, 6, 0x5a5f66, { p: [x, 1.15, -1.6] });
+    m.cone(1.3, 0.45, 8, st.accent, { p: [x, 2.45, -1.6] });
+    for (const dx of [-0.75, 0.75]) m.box(0.4, 0.45, 0.4, 0xe8e8e2, { p: [x + dx, 0.22, -1.6] });
+  }
+  // parking bays
+  m.box(18, 0.03, 5, 0x5a5c60, { p: [0, 0.02, -6] });
+  for (let i = 0; i <= 6; i++) m.box(0.1, 0.035, 4.6, 0xf2f2ee, { p: [-7.5 + i * 2.5, 0.03, -6] });
+  addSign(out, signText(stopName(site, r)), st, 7, 1.0, 0, 4.9, 1.62);
 }
 
 export function buildMotel(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng, out: PropOut) {
+  // a state tourism highway complex: a long low block with an arcade of cusped arches along a
+  // veranda, small chhatris on the roof corners, a lawn with round shrubs, the reception building
+  // where the arrival point is, and the name board on a gateway by the road
   const st = styleFor(site);
-  m.box(22, 3.2, 6, st.wall, { p: [0, 1.6, 9] });
-  m.box(22.8, 0.35, 8, st.roof, { p: [0, 3.35, 8.3] });
+  const WALL = 0xe8d8b8, ARCH = 0xf2ead8, TRIM = 0xb8603e;
+  m.box(22, 3.4, 6, WALL, { p: [0, 1.7, 9.5] });
+  m.box(22.4, 0.3, 9, TRIM, { p: [0, 3.55, 8] });
   for (let i = 0; i < 7; i++) {
-    m.box(1, 2.1, 0.12, st.trim, { p: [-9 + i * 3, 1.05, 5.95] });
-    g.box(1.1, 0.9, 0.1, r.chance(0.6) ? 0xffd890 : 0x404850, { p: [-7.6 + i * 3, 1.8, 5.95] });
+    const x = -9 + i * 3;
+    m.shape(cuspedArch(3, 2.2, 1.5, 3.4), 0.3, ARCH, { p: [x, 0, 3.6] });
+    m.box(1, 2.1, 0.1, st.trim, { p: [x, 1.05, 6.45] });
+    g.box(0.9, 0.8, 0.1, r.chance(0.6) ? 0xffd890 : 0x404850, { p: [x + 1.1, 1.8, 6.45] });
   }
-  m.box(5, 3.4, 5, st.wall, { p: [-13, 1.7, 2] }); // office
-  g.box(2.4, 1.2, 0.1, 0xffe2a0, { p: [-13, 1.9, -0.55] });
-  m.box(0.35, 6.5, 0.35, 0x5a5f66, { p: [10, 3.25, -10] });
-  addSign(out, signText(stopName(site, r)), st, 4.2, 2, 10, 7, -10.05);
+  m.box(22, 0.15, 3, 0xc8c0b0, { p: [0, 0.08, 5.1] });
+  for (const x of [-10.5, 10.5]) {
+    for (const sx of [-0.6, 0.6]) for (const sz of [-0.6, 0.6]) m.box(0.15, 1.1, 0.15, ARCH, { p: [x + sx, 4.25, 11.5 + sz] });
+    m.box(1.7, 0.15, 1.7, TRIM, { p: [x, 4.85, 11.5] });
+    m.add(new THREE.SphereGeometry(0.75, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), ARCH, { p: [x, 4.9, 11.5] });
+  }
+  // lawn and shrubs in front
+  m.box(20, 0.05, 6, 0x5f9a48, { p: [2, 0.03, -1.5] });
+  for (let i = 0; i < 6; i++) m.sphere(0.55, 8, 6, 0x3f7a3a, { p: [-6 + i * 3.6, 0.5, -1.5 + (i % 2) * 1.4] });
+  // reception (arrival point in front of it)
+  m.box(5, 3.4, 5, WALL, { p: [-13, 1.7, 2] });
+  m.shape(cuspedArch(5, 2.2, 1.6, 3.4), 0.3, ARCH, { p: [-13, 0, -0.8] });
+  g.box(2.0, 1.2, 0.1, 0xffe2a0, { p: [-13, 1.9, -0.55] });
+  m.box(5.4, 0.3, 5.4, TRIM, { p: [-13, 3.55, 2] });
+  // gateway with the name board
+  for (const x of [8, 12]) m.box(0.5, 4.2, 0.5, WALL, { p: [x, 2.1, -10] });
+  m.box(4.8, 0.3, 0.7, TRIM, { p: [10, 4.35, -10] });
+  addSign(out, signText(stopName(site, r)), st, 4.0, 1.2, 10, 3.5, -10.3);
 }
 
 export function buildOverlook(m: ModelBuilder, _g: ModelBuilder, site: Site, _r: Rng, out: PropOut) {
