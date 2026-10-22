@@ -101,7 +101,7 @@ add({
 for (const key of ANIMAL_KEYS) add({ group: 'Animals', name: key, build: () => makeAnimal(key) });
 
 // ---------------------------------------------------------------- vegetation
-const SWAY: Partial<Record<string, number>> = { pine: 0.6, broadleaf: 0.8, palm: 1.2, bush: 0.6, grass: 2.5, flowers: 2.5, banana: 1.2, bamboo: 0.8, crop: 1.8, silveroak: 0.7, acacia: 0.5, tea: 0.2 };
+const SWAY: Partial<Record<string, number>> = { pine: 0.6, broadleaf: 0.8, palm: 1.2, bush: 0.6, grass: 2.5, flowers: 2.5, banana: 1.2, bamboo: 0.8, crop: 1.8, acacia: 0.5 };
 const VEG_COLOUR = new Map<string, { color: number; biome: BiomeId }>();
 for (const b of Object.values(BIOMES)) for (const v of b.vegetation) if (!VEG_COLOUR.has(v.type)) VEG_COLOUR.set(v.type, { color: v.colors[0], biome: b.id });
 for (const t of VEG_TYPES) {

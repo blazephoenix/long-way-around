@@ -1,5 +1,5 @@
 // India layer models: kilometre stones, ghat signs and hairpin boards, speed breakers, toll plaza,
-// cantilevered fishing nets, stepwell, fort wall, banyan shrine, tea estate, dhaba, tapri,
+// cantilevered fishing nets, stepwell, fort wall, banyan shrine, dhaba, tapri,
 // coconut and sugarcane stands. Proportions follow the scenery references in REFERENCES.md.
 import * as THREE from 'three';
 import { registerBuilder, signMesh, PropOut } from './props';
@@ -381,26 +381,6 @@ registerBuilder('banyan', (m, g, _s, r) => {
     g.cone(0.04, 0.1, 5, 0xffb84a, { p: [x, 0.65, -5.3] });
   }
   for (let i = 0; i < 6; i++) m.sphere(0.1, 5, 4, i % 2 ? 0xf29a2a : 0xf2c22a, { p: [-0.5 + i * 0.2, 0.55, -5.0] });
-});
-
-// ---------------------------------------------------------------- tropical: tea estate
-registerBuilder('teaestate', (m, _g, s, r, out) => {
-  // a sign at the estate road and a few silver oaks; the bushes come from the vegetation layer
-  m.box(0.12, 2, 0.12, 0x5a5f66, { p: [-1.4, 1, 0] });
-  m.box(0.12, 2, 0.12, 0x5a5f66, { p: [1.4, 1, 0] });
-  // real estates of the Nilgiris and Munnar, walked in order along the road so neighbours differ
-  const names = ['KOLUKKUMALAI\nTEA ESTATE', 'GLENDALE\nTEA ESTATE', 'KORAKUNDAH\nTEA ESTATE', 'CHAMRAJ\nTEA ESTATE', 'LOCKHART\nTEA ESTATE', 'THIASHOLA\nTEA ESTATE', 'KANNAN DEVAN\nHILLS'];
-  const sm = signMesh(cycle(names, Math.floor(s.s / 1000)), 3.2, 1.3, '#2f6a4a', '#f2ead2');
-  sm.position.set(0, 2.2, -0.08);
-  sm.rotation.y = Math.PI;
-  out.extras.push(sm);
-  m.box(3.3, 1.4, 0.04, 0x5a5f66, { p: [0, 2.2, -0.04] });
-  for (let i = 0; i < 4; i++) {
-    const x = r.range(-25, 25), z = r.range(10, 50);
-    m.cyl(0.12, 0.2, 9, 5, 0xb8b0a0, { p: [x, 4.5, z] });
-    m.ico(1.3, 0, 0x4a7a3a, { p: [x, 9.2, z], s: [1, 1.7, 1] });
-  }
-  void s;
 });
 
 // ---------------------------------------------------------------- dhaba (diner variant) and stand variants

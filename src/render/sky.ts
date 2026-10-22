@@ -1,4 +1,4 @@
-// Sky dome (gradient, sun disc, moon, stars, aurora), flat-shaded cloud billboards,
+// Sky dome (gradient, sun disc, moon, stars, the Milky Way), flat-shaded cloud billboards,
 // and the time-of-day lighting rig that drives fog, ink colour and lights.
 import * as THREE from 'three';
 import { shared } from './toon';
@@ -71,7 +71,7 @@ void main() {
 
 const skyFrag = /* glsl */ `
 uniform vec3 uZenith, uHorizon, uGround, uSunDir, uMoonDir, uSunCol;
-uniform float uStars, uTime, uAurora, uOvercast, uSunVis;
+uniform float uStars, uTime, uMilky, uOvercast, uSunVis;
 varying vec3 vDir;
 float hash(vec3 p){ p = fract(p*0.3183099+.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
 void main(){
@@ -100,15 +100,20 @@ void main(){
       col += vec3(s * tw) * uStars * smoothstep(0.0, 0.25, h) * (1.0 - uOvercast);
     }
   }
-  // aurora: ribbons of green and violet near the northern horizon
-  if (uAurora > 0.01 && h > 0.0) {
-    float az = atan(d.x, d.z);
-    float band = sin(az * 6.0 + uTime * 0.12 + sin(az * 13.0 + uTime * 0.3) * 0.8);
-    float hband = smoothstep(0.05, 0.25, h) * smoothstep(0.75, 0.3, h);
-    float rib = smoothstep(0.2, 0.95, band) * hband;
-    float north = smoothstep(-0.2, 0.6, d.z);
-    vec3 ac = mix(vec3(0.2,0.95,0.55), vec3(0.6,0.35,0.95), smoothstep(0.25,0.6,h));
-    col += ac * rib * north * uAurora * 0.75;
+  // the Milky Way on dark clear nights in the hills: a pale band rising out of the northern horizon
+  // over the zenith, mottled into star clouds, split by a dark dust lane, thick with faint stars
+  if (uMilky > 0.01 && h > 0.0) {
+    vec3 n = normalize(vec3(1.0, 0.25, 0.0)); // band plane holds due north, tilted off the zenith
+    float x = dot(d, n);
+    float along = atan(dot(d, normalize(cross(n, vec3(0.0, 1.0, 0.0)))), d.y);
+    float clouds = 0.55 + 0.45 * sin(along * 7.0 + 1.3) * sin(along * 17.0 + x * 40.0);
+    float lane = x - 0.03 * sin(along * 5.0);
+    float glow = exp(-x * x / 0.012) * clouds * (1.0 - 0.75 * exp(-lane * lane / 0.0006));
+    vec3 q = d * 420.0;
+    float r2 = hash(floor(q));
+    float dust = r2 > 0.93 ? smoothstep(0.22, 0.0, length(fract(q) - 0.5)) : 0.0;
+    vec3 mc = mix(vec3(0.55, 0.6, 0.75), vec3(0.85, 0.8, 0.7), clouds);
+    col += (mc * glow * 0.32 + vec3(dust) * exp(-x * x / 0.03) * 0.5) * smoothstep(0.02, 0.2, h) * uMilky * (1.0 - uOvercast);
   }
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
@@ -180,7 +185,7 @@ export class Sky {
       uSunCol: { value: new THREE.Color() },
       uStars: { value: 0 },
       uTime: shared.time,
-      uAurora: { value: 0 },
+      uMilky: { value: 0 },
       uOvercast: { value: 0 },
       uSunVis: { value: 1 },
     };
@@ -245,7 +250,7 @@ export class Sky {
     this.clouds.count = Math.round(8 + cover * 26);
   }
 
-  update(hour: number, focus: THREE.Vector3, fogColor: THREE.Color, opts: { overcast: number; aurora: number; dim: number }) {
+  update(hour: number, focus: THREE.Vector3, fogColor: THREE.Color, opts: { overcast: number; milkyWay: number; dim: number }) {
     this.hour = hour;
     let i = 0;
     while (i < KEYS.length - 2 && KEYS[i + 1].h <= hour) i++;
@@ -271,7 +276,7 @@ export class Sky {
     (this.uniforms.uMoonDir.value as THREE.Vector3).copy(this.moonDir);
     this.night = 1 - THREE.MathUtils.smoothstep(this.sunDir.y, -0.12, 0.08);
     this.uniforms.uStars.value = THREE.MathUtils.smoothstep(this.night, 0.4, 1);
-    this.uniforms.uAurora.value = opts.aurora;
+    this.uniforms.uMilky.value = opts.milkyWay;
     this.uniforms.uOvercast.value = ov;
     this.uniforms.uSunVis.value = THREE.MathUtils.smoothstep(this.sunDir.y, -0.05, 0.02);
 

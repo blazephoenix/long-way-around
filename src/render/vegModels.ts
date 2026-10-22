@@ -8,18 +8,30 @@ import { rod } from './carKit';
 type V3 = [number, number, number];
 
 const TRUNK = 0x6b4a32;
-const TRUNK_PALE = 0xb8b0a0;
 
 /** One species' geometry; `far` asks for a lighter version where the species has one (beyond about 200 m). */
 export function vegGeometry(t: VegType, far = false): THREE.BufferGeometry {
   const m = new ModelBuilder();
   switch (t) {
     case 'pine': {
-      m.cyl(0.16, 0.26, 2.4, 5, TRUNK, { p: [0, 1.2, 0] });
+      // Khasi pine (Pinus kesiya), after Shillong and Benguet stands: a tall straight trunk bare for
+      // most of its height, a few branches sweeping up and out, and the needles in bright, fluffy,
+      // flattened tufts at the branch ends, so the crown is open and irregular rather than a cone
+      const trunk: V3[] = [[0, 0, 0], [0.12, 4.2, 0.05], [0.05, 8.2, -0.08], [0.18, 10.6, 0]];
+      if (far) rod(m, trunk[0], trunk[3], 0.26, 0.08, 4, 0x6e5c4a);
+      else for (let i = 0; i < 3; i++) rod(m, trunk[i], trunk[i + 1], 0.26 - i * 0.07, 0.2 - i * 0.07, 5, i ? 0x6e5c4a : 0x5e4c3c);
+      const branches = far ? 3 : 6;
+      const tufts: [V3, number][] = [[trunk[3], 1.25]];
+      for (let i = 0; i < branches; i++) {
+        const az = i * 2.4 + 0.6, y = 6.2 + (i / branches) * 3.6, L = 2.6 - (i / branches) * 1.1;
+        const up = 0.55 + (i % 2) * 0.25;
+        const b: V3 = [trunk[1][0] * 0.5, y, 0];
+        const tip: V3 = [b[0] + Math.cos(az) * L * Math.cos(up), y + L * Math.sin(up), b[2] + Math.sin(az) * L * Math.cos(up)];
+        rod(m, b, tip, 0.09, 0.05, 4, 0x6e5c4a);
+        tufts.push([tip, far ? 1.35 : 1.0 + (i % 3) * 0.12]);
+      }
       m.tint(true);
-      m.cone(2.1, 3.6, 7, 0xffffff, { p: [0, 3.6, 0] });
-      m.cone(1.65, 3.0, 7, 0xeef2ee, { p: [0, 5.4, 0], r: [0, 0.4, 0] });
-      m.cone(1.15, 2.6, 7, 0xdde6de, { p: [0, 7.1, 0], r: [0, 0.9, 0] });
+      tufts.forEach(([c, r], i) => m.add(tuft(i), i % 3 ? 0xffffff : 0xe2ecd8, { p: c, s: [r * 1.15, r * 0.55, r * 1.05], r: [0, i * 1.3, 0] }));
       break;
     }
     case 'broadleaf': {
@@ -29,13 +41,6 @@ export function vegGeometry(t: VegType, far = false): THREE.BufferGeometry {
       m.ico(1.9, 0, 0xffffff, { p: [0, 4.3, 0], s: [1, 0.85, 1] });
       m.ico(1.4, 0, 0xe6ece4, { p: [1.2, 3.8, 0.4], s: [1, 0.85, 1] });
       m.ico(1.3, 0, 0xf2f2ee, { p: [-0.9, 3.9, -0.7], s: [1, 0.85, 1] });
-      break;
-    }
-    case 'silveroak': {
-      m.cyl(0.12, 0.22, 6, 5, TRUNK_PALE, { p: [0, 3, 0] });
-      m.tint(true);
-      m.ico(1.3, 0, 0xffffff, { p: [0, 6.5, 0], s: [1, 1.6, 1] });
-      m.ico(0.9, 0, 0xe0e6dc, { p: [0.3, 8.6, 0], s: [1, 1.4, 1] });
       break;
     }
     case 'palm': {
@@ -210,13 +215,6 @@ export function vegGeometry(t: VegType, far = false): THREE.BufferGeometry {
       }
       break;
     }
-    case 'tea': {
-      // a clipped hedge segment, laid along the contour
-      m.tint(true);
-      // a square prism with a flat top: 16 triangles, no separate base
-      m.cyl(0.6, 0.6, 4.0, 4, 0xffffff, { p: [0, 0.3, 0], r: [Math.PI / 4, 0, Math.PI / 2], s: [1, 1, 0.85] });
-      break;
-    }
     case 'crop': {
       // a grain tuft (wheat or paddy, by the biome's tint): narrow blades arching out of the base,
       // and a few stalks carrying pale spindle-shaped ears
@@ -278,5 +276,19 @@ function blade(rib: V3[], w: number[], side: V3, fold = 0): THREE.BufferGeometry
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return g;
+}
+
+/** A needle tuft: an icosahedron with its corners pushed in and out, so the outline is ragged. */
+function tuft(seed: number): THREE.BufferGeometry {
+  const g = new THREE.IcosahedronGeometry(1, 0);
+  const p = g.attributes.position;
+  const bump = new Map<string, number>();
+  for (let i = 0; i < p.count; i++) {
+    const key = `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
+    if (!bump.has(key)) bump.set(key, 0.75 + (((seed * 7 + bump.size * 13) % 9) / 9) * 0.55);
+    const k = bump.get(key)!;
+    p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k);
+  }
   return g;
 }

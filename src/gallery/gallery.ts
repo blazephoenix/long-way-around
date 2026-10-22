@@ -257,7 +257,7 @@ export async function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
       const rig = c.userData.rig as Rig | undefined;
       if (rig) { rig.play(walk ? 'Walk' : 'Idle'); rig.update(dt); }
     });
-    sky.update(hour, controls.target, fog.color, { overcast: 0, aurora: 0, dim: 1 });
+    sky.update(hour, controls.target, fog.color, { overcast: 0, milkyWay: 0, dim: 1 });
     nightGlow.value = THREE.MathUtils.smoothstep(sky.night, 0.2, 0.8) * 0.9;
     updateWaterLight(sky.sun, sky.hemi.intensity, sky.horizon);
     const u = post.material.uniforms;

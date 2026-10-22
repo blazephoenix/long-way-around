@@ -85,7 +85,7 @@ export class Game {
   timeScale = 1;
   weatherDim = 1;
   overcast = 0;
-  aurora = 0;
+  milkyWay = 0;
   fogBoost = 0;
   readonly player: Player;
   readonly walker: Walker;
@@ -514,7 +514,7 @@ export class Game {
     const bl = r.blend;
     const A = BIOMES[bl.a], B = BIOMES[bl.b];
     // fog colour: sky horizon tinted by biome fog colour
-    this.sky.update(this.hour, focus, this.fog.color, { overcast: this.overcast, aurora: this.aurora, dim: this.weatherDim });
+    this.sky.update(this.hour, focus, this.fog.color, { overcast: this.overcast, milkyWay: this.milkyWay, dim: this.weatherDim });
     tmpC.setHex(A.fog.color).lerp(tmpC2.setHex(B.fog.color), bl.t);
     this.fog.color.lerp(tmpC, 0.35 * (1 - this.sky.night * 0.7));
     const q = QUALITY[this.settings.quality];

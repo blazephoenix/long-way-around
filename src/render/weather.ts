@@ -1,7 +1,7 @@
 // Rolling weather by biome (clear, overcast, fog, rain, storm), rain particles, wet roads,
 // lightning with thunder, monsoon downpours, and the rare sky events with readable rules:
 // rainbows after rain with the sun low behind you, meteor showers on some clear nights,
-// aurora on rare clear nights in the pine forest, mist on ghat roads in the early morning.
+// the Milky Way on rare clear nights in the pine forest, mist on ghat roads in the early morning.
 import * as THREE from 'three';
 import type { Game } from '../game';
 import { BIOMES, WeatherId } from '../../data/biomes';
@@ -67,7 +67,7 @@ export class Weather {
   private afterRain = 0; // in-game hours since rain stopped
   private rainedHard = false;
   private nightRolled = -1;
-  private aurora = false;
+  private milkyWay = false;
   private meteorNight = false;
   private nextMeteor = 3;
   wet = 0;
@@ -233,11 +233,11 @@ export class Weather {
     if (night && this.nightRolled !== g.day) {
       this.nightRolled = g.day;
       const r = new Rng(hashInts(g.world.seed, SYS.weather, g.day, 99));
-      this.aurora = r.chance(0.18);
+      this.milkyWay = r.chance(0.18);
       this.meteorNight = r.chance(0.25);
     }
     const clearNight = night && p.ov < 0.3;
-    g.aurora += ((this.aurora && clearNight && biome === 'forest' ? 1 : 0) - g.aurora) * Math.min(1, dt * 0.2);
+    g.milkyWay += ((this.milkyWay && clearNight && biome === 'forest' ? 1 : 0) - g.milkyWay) * Math.min(1, dt * 0.2);
     g.meteors = this.meteorNight && clearNight;
     if (g.meteors) {
       this.nextMeteor -= dt;

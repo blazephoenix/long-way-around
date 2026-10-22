@@ -205,9 +205,9 @@ export class People {
     const c0 = Math.floor(fromS / CHUNK);
     for (let c = c0 + 2; c < c0 + 60; c++) {
       for (const s of chunkSites(this.world, c)) {
-        if (s.kind === 'hidden' || s.kind === 'stepwell' || s.kind === 'waterfall' || s.kind === 'temple' || s.kind === 'teaestate') {
+        if (s.kind === 'hidden' || s.kind === 'stepwell' || s.kind === 'waterfall' || s.kind === 'temple') {
           const rare = this.rareFor(s);
-          const label = s.kind === 'hidden' ? `${rare.name}: ${rare.hint.toLowerCase()}` : `${s.kind === 'stepwell' ? 'the stepwell' : s.kind === 'teaestate' ? 'the tea estate' : s.kind === 'waterfall' ? 'the waterfall' : 'the stone temple'} up the road`;
+          const label = s.kind === 'hidden' ? `${rare.name}: ${rare.hint.toLowerCase()}` : `${s.kind === 'stepwell' ? 'the stepwell' : s.kind === 'waterfall' ? 'the waterfall' : 'the stone temple'} up the road`;
           return { id: `tip:${s.id}`, x: s.x, z: s.z, label };
         }
       }

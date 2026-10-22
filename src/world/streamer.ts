@@ -26,8 +26,8 @@ interface Tile {
   wantVeg: number;
 }
 
-const CAP: Partial<Record<VegType, number>> = { grass: 30000, crop: 16000, flowers: 8000, bush: 14000, pine: 12000, broadleaf: 12000, tea: 40000 };
-const SWAY: Partial<Record<VegType, number>> = { pine: 0.6, broadleaf: 0.8, palm: 1.2, bush: 0.6, grass: 2.5, flowers: 2.5, banana: 1.2, bamboo: 0.8, crop: 1.8, silveroak: 0.7, acacia: 0.5, tea: 0.2 };
+const CAP: Partial<Record<VegType, number>> = { grass: 30000, crop: 16000, flowers: 8000, bush: 14000, pine: 12000, broadleaf: 12000 };
+const SWAY: Partial<Record<VegType, number>> = { pine: 0.6, broadleaf: 0.8, palm: 1.2, bush: 0.6, grass: 2.5, flowers: 2.5, banana: 1.2, bamboo: 0.8, crop: 1.8, acacia: 0.5 };
 
 export type ChunkExtra = ExtraGen;
 void (null as unknown as ModelBuilder);
@@ -74,7 +74,7 @@ export class Streamer {
         const im = new THREE.InstancedMesh(vegGeometry(t, far), m, cap);
         im.count = 0;
         im.frustumCulled = false;
-        im.castShadow = !far && t !== 'grass' && t !== 'flowers' && t !== 'crop' && t !== 'tea';
+        im.castShadow = !far && t !== 'grass' && t !== 'flowers' && t !== 'crop';
         im.receiveShadow = true;
         im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
         im.name = 'veg-' + t + (far ? '-far' : '');

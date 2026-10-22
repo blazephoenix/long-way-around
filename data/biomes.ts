@@ -8,10 +8,10 @@ export const BIOME_IDS: BiomeId[] = ['forest', 'coast', 'desert', 'farm', 'tropi
 
 export type VegType =
   | 'pine' | 'broadleaf' | 'palm' | 'bush' | 'rock' | 'grass' | 'flowers'
-  | 'euphorbia' | 'acacia' | 'banana' | 'bamboo' | 'tea' | 'crop' | 'boulder' | 'silveroak';
+  | 'euphorbia' | 'acacia' | 'banana' | 'bamboo' | 'crop' | 'boulder';
 export const VEG_TYPES: VegType[] = [
   'pine', 'broadleaf', 'palm', 'bush', 'rock', 'grass', 'flowers',
-  'euphorbia', 'acacia', 'banana', 'bamboo', 'tea', 'crop', 'boulder', 'silveroak',
+  'euphorbia', 'acacia', 'banana', 'bamboo', 'crop', 'boulder',
 ];
 
 export type TerrainKind = 'rolling' | 'coast' | 'mesa' | 'farm' | 'steep' | 'flat';
@@ -97,7 +97,7 @@ export const BIOMES: Record<BiomeId, BiomeConfig> = {
     gradient: [0.42, 0.68, 0.88, 1.0],
     fog: { color: 0xa9c4c8, near: 120, far: 760 },
     vegetation: [
-      { type: 'pine', density: 26, scale: [0.8, 1.6], colors: [0x2f5d3f, 0x356b45, 0x29513a], patchy: 0.25, minRoad: 7, maxSlope: 0.9, collide: 0.5 },
+      { type: 'pine', density: 26, scale: [0.8, 1.6], colors: [0x4a7a38, 0x55853f, 0x426e34], patchy: 0.25, minRoad: 7, maxSlope: 0.9, collide: 0.5 },
       { type: 'broadleaf', density: 3, scale: [0.8, 1.2], colors: [0x5f8f3e, 0x6e9a45], patchy: 0.5, minRoad: 8, collide: 0.5 },
       { type: 'rock', density: 4, scale: [0.5, 1.6], colors: [0x8d8b85, 0x7d7b78], minRoad: 6, collide: 0.9 },
       { type: 'bush', density: 10, scale: [0.6, 1.2], colors: [0x4b7a40, 0x58884a], minRoad: 5.5 },
@@ -245,8 +245,6 @@ export const BIOMES: Record<BiomeId, BiomeConfig> = {
       { type: 'banana', density: 5, scale: [0.8, 1.2], colors: [0x5aa24a, 0x6aac4f], patchy: 0.5, minRoad: 6 },
       { type: 'bamboo', density: 4, scale: [0.8, 1.3], colors: [0x7fae4a, 0x6f9f45], patchy: 0.55, minRoad: 7, collide: 0.6 },
       { type: 'bush', density: 30, scale: [0.7, 1.4], colors: [0x3f8a3c, 0x4a9442], minRoad: 5.5 },
-      { type: 'tea', density: 2000, scale: [0.95, 1.1], colors: [0x4f9a3a, 0x5aa040, 0x56a23c], minRoad: 14, maxSlope: 1.0 },
-      { type: 'silveroak', density: 4, scale: [0.9, 1.2], colors: [0x4a7a3a], minRoad: 14, collide: 0.4 },
       { type: 'grass', density: 30, scale: [0.8, 1.4], colors: [0x5aa04a, 0x66aa50], minRoad: 5 },
     ],
     lakes: 0.15,

@@ -40,8 +40,8 @@ export const SUBJECTS: SubjectDef[] = [
   { id: 'lookout', name: 'Forest watchtower', page: 'forest', tier: 'common', kind: 'landmark', hint: 'The forest guards climb up here at dawn.', size: [5, 8], site: 'lookout' },
   { id: 'cabin', name: 'Khasi cottage', page: 'forest', tier: 'common', kind: 'landmark', hint: 'A tin roof and a stovepipe among the pines.', size: [7, 6], site: 'cabin' },
   { id: 'bridge', name: 'Wooden bridge', page: 'forest', tier: 'uncommon', kind: 'landmark', hint: 'Where a river crosses the road.', size: [6, 2], site: 'bridge' },
-  { id: 'aurora', name: 'Aurora', page: 'forest', tier: 'rare', kind: 'sky', hint: 'On rare clear nights, the northern sky moves.', size: [0, 0] },
-  { id: 'aurora-lake', name: 'Aurora over a lake', page: 'forest', tier: 'legendary', kind: 'sky', hint: 'When the sky moves at night, find still water to hold it.', size: [0, 0] },
+  { id: 'aurora', name: 'Milky Way', page: 'forest', tier: 'rare', kind: 'sky', hint: 'On rare clear nights in the hills, a river of stars rises out of the north.', size: [0, 0] },
+  { id: 'aurora-lake', name: 'Milky Way over a lake', page: 'forest', tier: 'legendary', kind: 'sky', hint: 'When the stars run thick at night, find still water to hold them.', size: [0, 0] },
 
   // ---------------- coast
   { id: 'gull', name: 'Seagull', page: 'coast', tier: 'common', kind: 'wildlife', hint: 'Always overhead where land meets sea.', spawn: { place: 'air', perChunk: 1.2, windows: [...ALLDAY, 'blue'], group: [1, 3] }, size: [0.5, 0.3], model: 'gull' },
@@ -90,8 +90,6 @@ export const SUBJECTS: SubjectDef[] = [
   { id: 'waterfall', name: 'Waterfall', page: 'tropical', tier: 'uncommon', kind: 'landmark', hint: 'Where the hills drop away suddenly.', size: [9, 20], site: 'waterfall' },
   { id: 'temple', name: 'Stone temple', page: 'tropical', tier: 'uncommon', kind: 'landmark', hint: 'Small, old, and looked after.', size: [5, 12], site: 'temple' },
   { id: 'ropebridge', name: 'Rope bridge', page: 'tropical', tier: 'uncommon', kind: 'landmark', hint: 'Footpaths cross the rivers on these.', size: [8, 3], site: 'ropebridge' },
-  { id: 'teaestate', name: 'Tea estate', page: 'tropical', tier: 'common', kind: 'landmark', hint: 'Rows of tea follow the contours of the hills.', size: [20, 6], site: 'teaestate', india: true },
-  { id: 'rainbow-tea', name: 'Rainbow over a tea estate', page: 'tropical', tier: 'legendary', kind: 'sky', hint: 'After a monsoon downpour, find the tea hills with the sun at your back.', size: [0, 0], india: true },
 
   // ---------------- city
   { id: 'pigeon', name: 'Pigeons', page: 'city', tier: 'common', kind: 'wildlife', hint: 'On every ledge in town.', spawn: { place: 'town', perChunk: 1.0, windows: ALLDAY, group: [2, 5] }, size: [0.15, 0.15], model: 'pigeon' },

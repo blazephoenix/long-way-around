@@ -210,7 +210,6 @@ export class PhotoCamera {
     const pc = Math.floor(cam.position.z / CHUNK);
     let towers = 0, lights = 0;
     const towerPos = new THREE.Vector3();
-    let teaVisible = false;
     for (let c = pc - 4; c <= pc + 4; c++) {
       for (const s of chunkSites(g.world, c)) {
         const sid = s.kind === 'ghatsign' ? `gsign${s.variant}` : SITE_SUBJECT[s.kind];
@@ -221,7 +220,6 @@ export class PhotoCamera {
         const def = SUBJECT_BY_ID[sid];
         if (def.india && !FEATURES.india) continue;
         const pos = new THREE.Vector3(s.x, s.kind === 'seastack' ? 0 : y, s.z);
-        if (s.kind === 'teaestate' && this.inFrame(cam, pos.clone().add(new THREE.Vector3(0, 2, 0)))) teaVisible = true;
         out.push({ uid: s.id, defId: sid, pos, r: def.size[0], h: def.size[1] });
       }
       const F = g.world.chunkFeatures(c);
@@ -248,13 +246,14 @@ export class PhotoCamera {
       if (biome === 'desert') sky('sunset-desert', sun);
     }
     const look = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-    if (g.aurora > 0.3 && biome === 'forest') {
+    if (g.milkyWay > 0.3 && biome === 'forest') {
       const north = new THREE.Vector3(0, 0.3, 1);
-      // the lake version replaces the plain one, so one shot doesn't pay twice
+      // the lake version replaces the plain one, so one shot doesn't pay twice. The ids are the old
+      // aurora subjects', kept so existing journals carry over.
       sky(this.waterInFrame(cam) ? 'aurora-lake' : 'aurora', north);
     }
     if (g.rainbowDir) {
-      sky(teaVisible ? 'rainbow-tea' : 'rainbow', g.rainbowDir);
+      sky('rainbow', g.rainbowDir);
     }
     if (g.meteors && look.y > 0.15) sky('meteors', look);
     if (g.flashActive && look.y > -0.05) sky('lightning', look);

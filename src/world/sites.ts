@@ -12,7 +12,7 @@ export type LandmarkKind =
   | 'barn' | 'windmill' | 'silo' | 'temple' | 'ropebridge' | 'waterfall'
   | 'dino' | 'cup' | 'oddsign' | 'oldcar' | 'phonebooth'
   // India layer (milestone 7)
-  | 'stepwell' | 'fishingnets' | 'banyan' | 'teaestate' | 'fortwall' | 'milestone' | 'ghatsign' | 'hairpin' | 'breaker';
+  | 'stepwell' | 'fishingnets' | 'banyan' | 'fortwall' | 'milestone' | 'ghatsign' | 'hairpin' | 'breaker';
 
 export interface Site {
   id: string;
@@ -159,7 +159,6 @@ const LANDMARKS_IN: Partial<Record<BiomeId, [LandmarkKind, number][]>> = {
   coast: [['fishingnets', 1.3]],
   desert: [['fortwall', 0.9], ['stepwell', 0.5]],
   farm: [['banyan', 1.5]],
-  tropical: [['teaestate', 1.6]],
 };
 function landmarksFor(b: BiomeId): [LandmarkKind, number][] {
   return FEATURES.india ? [...LANDMARKS[b], ...(LANDMARKS_IN[b] ?? [])] : LANDMARKS[b];
@@ -385,7 +384,6 @@ function placeLandmark(world: World, out: Site[], rng: Rng, kind: LandmarkKind, 
     if (kind === 'fishingnets') score = h < 1.2 && h > -1.5 ? 12 : -50;
     if (kind === 'banyan') score = 5 - Math.abs(h - r.y) + rng.float();
     if (kind === 'stepwell') score = 5 - Math.abs(h - r.y) * 0.5 + rng.float();
-    if (kind === 'teaestate') score = world.noise.n2(x / 700 + 9, z / 700 - 4) > 0.28 ? 10 + rng.float() : -60;
     if (kind === 'cabin' || kind === 'barn' || kind === 'temple') score = -Math.abs(h - r.y) + rng.float();
     if (kind === 'waterfall') score = h - r.y > 12 ? 20 : h - r.y;
     if (blocked(x, z, 20)) score -= 1000;
@@ -394,7 +392,7 @@ function placeLandmark(world: World, out: Site[], rng: Rng, kind: LandmarkKind, 
       bestScore = score;
       const heading = Math.atan2(-(r.x - x), -(r.z - z));
       const pitty = kind === 'stepwell';
-      best = { id: `lm:${kind}:${c}`, kind, cat: 'landmark', x, z, s, side, heading, pit: pitty ? { r: 9.5, depth: 7.5 } : undefined, clear: kind === 'seastack' || kind === 'teaestate' ? 0 : kind === 'fortwall' ? 22 : kind === 'banyan' ? 12 : 16, biome, variant: rng.float().toFixed(4), flat: kind === 'seastack' || kind === 'pier' || kind === 'fishingnets' || kind === 'teaestate' ? undefined : { r: kind === 'barn' || kind === 'temple' ? 12 : kind === 'fortwall' ? 16 : kind === 'stepwell' ? 14 : 7, y: h } };
+      best = { id: `lm:${kind}:${c}`, kind, cat: 'landmark', x, z, s, side, heading, pit: pitty ? { r: 9.5, depth: 7.5 } : undefined, clear: kind === 'seastack' ? 0 : kind === 'fortwall' ? 22 : kind === 'banyan' ? 12 : 16, biome, variant: rng.float().toFixed(4), flat: kind === 'seastack' || kind === 'pier' || kind === 'fishingnets' ? undefined : { r: kind === 'barn' || kind === 'temple' ? 12 : kind === 'fortwall' ? 16 : kind === 'stepwell' ? 14 : 7, y: h } };
     }
   }
   if (best && bestScore > -100) out.push(best);

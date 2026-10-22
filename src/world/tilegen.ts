@@ -83,11 +83,6 @@ function biomeGround(world: World, B: BiomeConfig, x: number, z: number, h: numb
   } else if (t2 > 0.35 && B.id !== 'tropical') {
     mixc(out, hexLin(P.ground2), smoothstep(0.35, 0.45, t2) * 0.8, out);
   }
-  if (B.id === 'tropical') {
-    // tea estates: bright, even green on hillsides inside an estate mask
-    const tea = n.n2(x / 700 + 9, z / 700 - 4);
-    if (tea > 0.25 && al > 30 && slope < 0.8) mixc(out, hexLin(0x5fae3e), smoothstep(0.25, 0.3, tea), out);
-  }
   const rockAt = B.id === 'tropical' ? 1.25 : B.id === 'desert' ? 0.7 : 0.6;
   if (slope > rockAt) mixc(out, hexLin(B.terrain.kind === 'coast' ? P.cliff : P.rock), smoothstep(rockAt, rockAt + 0.3, slope), out);
   if (B.id === 'tropical' && slope > 0.75 && al < 16) mixc(out, hexLin(P.ground2), 0.7 * smoothstep(0.75, 0.95, slope), out);
@@ -203,8 +198,8 @@ export function buildTile(world: World, req: TileRequest): TileResult {
   };
 }
 
-const TREEISH = new Set<VegType>(['pine', 'broadleaf', 'palm', 'acacia', 'silveroak', 'bamboo', 'boulder']);
-const BASE_R: Partial<Record<VegType, number>> = { pine: 0.6, broadleaf: 0.7, palm: 0.4, acacia: 0.5, euphorbia: 0.7, bamboo: 1.0, rock: 1.0, boulder: 2.2, silveroak: 0.6, banana: 0.3 };
+const TREEISH = new Set<VegType>(['pine', 'broadleaf', 'palm', 'acacia', 'bamboo', 'boulder']);
+const BASE_R: Partial<Record<VegType, number>> = { pine: 0.6, broadleaf: 0.7, palm: 0.4, acacia: 0.5, euphorbia: 0.7, bamboo: 1.0, rock: 1.0, boulder: 2.2, banana: 0.3 };
 
 function scatter(world: World, req: TileRequest) {
   const x0 = req.ix * TILE, z0 = req.iz * TILE;
@@ -217,7 +212,6 @@ function scatter(world: World, req: TileRequest) {
   const byType = new Map<VegType, number[]>();
   const coll: number[] = [];
   const area = (TILE * TILE) / 10000;
-  const teaSlots = new Set<number>();
   for (const bid of biomes) {
     const B = BIOMES[bid];
     B.vegetation.forEach((spec: VegSpec, si: number) => {
@@ -242,10 +236,6 @@ function scatter(world: World, req: TileRequest) {
           const m = world.noise.n2(x / 85 + si * 17, z / 85 - si * 5) * 0.5 + 0.5;
           if (m < spec.patchy) continue;
         }
-        // tea estates: bushes in bands that follow the contours; other trees keep out of them
-        const teaMask = bid === 'tropical' ? world.noise.n2(x / 700 + 9, z / 700 - 4) : -1;
-        if ((spec.type === 'tea' || spec.type === 'silveroak') && teaMask <= 0.28) continue;
-        if (teaMask > 0.3 && (spec.type === 'broadleaf' || spec.type === 'bamboo' || spec.type === 'banana' || spec.type === 'palm' || spec.type === 'bush')) continue;
         const lat = Math.abs((x - r.x) * r.cosA);
         if (lat < (spec.minRoad ?? 6)) continue;
         if (world.surfaceAt(x, z) !== 'offroad') continue;
@@ -259,29 +249,8 @@ function scatter(world: World, req: TileRequest) {
           const sl = Math.sqrt(hx * hx + hz * hz) / 1.5;
           if (sl > (spec.maxSlope ?? 0.8)) continue;
         }
-        let rr = rot;
-        let px = x, pz = z, ph = h;
-        if (spec.type === 'tea') {
-          // snap to rows that run along the local contour: row spacing 2.2 m, hedge length 4 m
-          let gx = world.height(x + 1, z) - h, gz = world.height(x, z + 1) - h;
-          const gl = Math.hypot(gx, gz);
-          if (gl < 0.04) { gx = 1; gz = 0; } else { gx /= gl; gz /= gl; }
-          // quantise the direction so neighbouring rows stay parallel
-          const ang = Math.round(Math.atan2(gz, gx) / 0.26) * 0.26;
-          gx = Math.cos(ang); gz = Math.sin(ang);
-          const cx = -gz, cz = gx;
-          const a = Math.round((x * gx + z * gz) / 2.2) * 2.2;
-          const b = Math.round((x * cx + z * cz) / 4.0) * 4.0;
-          px = a * gx + b * cx;
-          pz = a * gz + b * cz;
-          const key = Math.round(px * 2) * 100003 + Math.round(pz * 2);
-          if (teaSlots.has(key)) continue;
-          teaSlots.add(key);
-          ph = world.height(px, pz);
-          rr = Math.atan2(-cz, cx); // local x along the contour
-        }
         const c = hexLin(spec.colors[ci]);
-        arr.push(px, ph - (spec.type === 'tea' ? 0.22 : 0.08), pz, rr, sc, c[0], c[1], c[2]);
+        arr.push(x, h - 0.08, z, rot, sc, c[0], c[1], c[2]);
         if (spec.collide && (req.veg === 2)) coll.push(x, z, (BASE_R[spec.type] ?? 0.5) * sc * spec.collide * 2);
       }
     });
