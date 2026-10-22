@@ -67,11 +67,11 @@ export class Streamer {
       const sway = SWAY[t] ?? 0;
       let m = mat.get(sway);
       if (!m) mat.set(sway, (m = makeInstancedMat(sway)));
-      const geo = vegGeometry(t);
-      // near set casts shadows; the far set doesn't, and lives on layer 1 so the mirror skips it
+      // near set casts shadows; the far set doesn't, uses the species' lighter geometry where it has
+      // one, and lives on layer 1 so the mirror skips it
       for (const far of [false, true]) {
         const cap = Math.ceil((CAP[t] ?? 6000) * (far ? 0.7 : 0.6));
-        const im = new THREE.InstancedMesh(geo, m, cap);
+        const im = new THREE.InstancedMesh(vegGeometry(t, far), m, cap);
         im.count = 0;
         im.frustumCulled = false;
         im.castShadow = !far && t !== 'grass' && t !== 'flowers' && t !== 'crop' && t !== 'tea';
