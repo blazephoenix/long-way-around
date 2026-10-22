@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { registerBuilder, signMesh, PropOut } from './props';
 import { ModelBuilder } from './models';
-import { beam } from './carKit';
+import { beam, rod } from './carKit';
 import { toon } from './toon';
 import type { Site } from '../world/sites';
 import type { Rng } from '../world/prng';
@@ -56,36 +56,45 @@ function milestone(_m: ModelBuilder, _g: ModelBuilder, s: Site, _r: Rng, out: Pr
   shape.lineTo(-0.24, 0);
   const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: false });
   geo.translate(0, 0, -0.08);
-  // UVs from the front-face position so the painted face maps cleanly
-  const pos = geo.attributes.position, uv = geo.attributes.uv;
-  for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + 0.24) / 0.48, pos.getY(i) / 0.74);
+  // UVs from position so the painted face maps cleanly. Seen from -z, +x is on the viewer's left,
+  // so that face is mirrored in u; both faces then read the right way round, as on the real stones
+  const pos = geo.attributes.position, uv = geo.attributes.uv, nrm = geo.attributes.normal;
+  for (let i = 0; i < pos.count; i++) {
+    const u = (pos.getX(i) + 0.24) / 0.48;
+    uv.setXY(i, nrm.getZ(i) < -0.5 ? 1 - u : u, pos.getY(i) / 0.74);
+  }
   const mat = stoneFace(s.text ?? 'NH 0|HERE|0', s.color ?? 0xf2c230);
+  // the stone stands on a low base, clear of the ground, so the distance at the bottom of the
+  // painted face stays readable on sloping verges
   const body = new THREE.Mesh(geo, mat);
-  body.position.y = -0.05;
+  body.position.y = 0.16;
   grp.add(body);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.3), toon({ color: 0xc8c4b8 }));
-  base.position.y = 0.0;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.3), toon({ color: 0xc8c4b8 }));
+  base.position.y = 0.01;
   grp.add(base);
   out.extras.push(grp);
 }
 
 function roadSign(text: string, bg: string, fg: string, w: number, h: number, out: PropOut, m: ModelBuilder, triangle = false) {
-  m.box(0.1, 2.2 + (triangle ? 0.9 : 0), 0.1, 0x5a5f66, { p: [0, 1.1 + (triangle ? 0.45 : 0), 0.06] });
-  const sm = signMesh(text, w, h, bg, fg);
-  sm.position.set(0, 1.9, 0);
-  sm.rotation.y = 0;
-  out.extras.push(sm);
-  const back = signMesh(text, w, h, '#9aa0a6', '#9aa0a6');
-  back.position.set(0, 1.9, 0.11);
-  back.rotation.y = Math.PI;
-  out.extras.push(back);
+  // two boards back to back, lettered on both faces for traffic either way, with the pole hidden
+  // between them
+  m.box(0.08, 2.2 + (triangle ? 0.9 : 0), 0.08, 0x5a5f66, { p: [0, 1.1 + (triangle ? 0.45 : 0), 0] });
+  for (const z of [-0.06, 0.06]) {
+    const sm = signMesh(text, w, h, bg, fg);
+    sm.position.set(0, 1.9, z);
+    if (z < 0) sm.rotation.y = Math.PI;
+    out.extras.push(sm);
+  }
+  m.box(w, h, 0.1, 0x9aa0a6, { p: [0, 1.9, 0] }); // board edge between the faces
   if (triangle) {
-    // red-bordered warning triangle with a hairpin symbol
-    m.shape([[-0.42, 0], [0.42, 0], [0, 0.72]], 0.04, 0xc8302a, { p: [0, 2.55, -0.02] });
-    m.shape([[-0.32, 0.06], [0.32, 0.06], [0, 0.6]], 0.05, 0xf7f5ee, { p: [0, 2.55, -0.03] });
-    m.add(new THREE.TorusGeometry(0.1, 0.025, 4, 10, Math.PI), 0x1a1a1a, { p: [0, 2.74, -0.06] });
-    m.box(0.04, 0.12, 0.02, 0x1a1a1a, { p: [-0.1, 2.68, -0.06] });
-    m.box(0.04, 0.12, 0.02, 0x1a1a1a, { p: [0.1, 2.68, -0.06] });
+    // red-bordered warning triangle with a hairpin symbol, on both faces
+    m.shape([[-0.42, 0], [0.42, 0], [0, 0.72]], 0.1, 0xc8302a, { p: [0, 2.55, -0.05] });
+    for (const sd of [-1, 1]) {
+      m.shape([[-0.32, 0.06], [0.32, 0.06], [0, 0.6]], 0.01, 0xf7f5ee, { p: [0, 2.55, sd * 0.055 - (sd < 0 ? 0.01 : 0)] });
+      m.add(new THREE.TorusGeometry(0.1, 0.025, 4, 10, Math.PI), 0x1a1a1a, { p: [0, 2.74, sd * 0.075] });
+      m.box(0.04, 0.12, 0.02, 0x1a1a1a, { p: [-0.1, 2.68, sd * 0.075] });
+      m.box(0.04, 0.12, 0.02, 0x1a1a1a, { p: [0.1, 2.68, sd * 0.075] });
+    }
   }
 }
 
@@ -95,11 +104,14 @@ registerBuilder('ghatsign', (m, _g, s, _r, out) => roadSign(s.text ?? '', '#f2c2
 registerBuilder('hairpin', (m, _g, s, _r, out) => roadSign(s.text ?? '', '#f2c230', '#1a1a1a', 1.5, 0.75, out, m, true));
 registerBuilder('breakersign', (m, _g, s, _r, out) => {
   // hand-painted on a white board, a little wonky, placed just after the bump
-  m.box(0.09, 1.5, 0.09, 0x6a4a34, { p: [-0.6, 0.75, 0.06] });
-  m.box(0.09, 1.5, 0.09, 0x6a4a34, { p: [0.6, 0.75, 0.06] });
+  // the sign stands 16 m past the bump (+s, local -z), so it faces -z: toward the traffic that has
+  // yet to reach the bump. Posts and backing board are behind it.
+  m.box(0.09, 1.5, 0.09, 0x6a4a34, { p: [-0.6, 0.75, 0.08] });
+  m.box(0.09, 1.5, 0.09, 0x6a4a34, { p: [0.6, 0.75, 0.08] });
+  m.box(1.52, 0.62, 0.03, 0xd8d4c8, { p: [0, 1.45, 0.02], r: [0, 0, -0.05] });
   const sm = signMesh(s.text ?? '', 1.5, 0.6, '#f7f3e8', '#b8302a');
   sm.position.set(0, 1.45, 0);
-  sm.rotation.z = 0.05;
+  sm.rotation.set(0, Math.PI, 0.05);
   out.extras.push(sm);
 });
 registerBuilder('breaker', (m, _g, s) => {
@@ -258,24 +270,107 @@ registerBuilder('fortwall', (m) => {
 
 // ---------------------------------------------------------------- farmland: banyan with a roadside shrine
 registerBuilder('banyan', (m, g, _s, r) => {
-  m.cyl(1.2, 1.8, 5, 9, 0x7a6a58, { p: [0, 2.5, 0] });
+  // after roadside banyans: a brown fluted trunk of several fused stems with a root flare, long
+  // thick limbs that rise and sag with side branches, slender prop roots dropped from them to the
+  // ground, curtains of thin hanging roots, and a wide low dome of dark leaves on the branch tips,
+  // much wider than it is tall
+  const BARK = 0x8a6a4e, BARK2 = 0x7a5c42, HANG = 0x6a4a32;
+  const stems: { a: number; d: number; rb: number; rt: number }[] = [];
   for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    m.cyl(0.35, 0.5, 4, 6, 0x7a6a58, { p: [Math.cos(a) * 2.5, 5.5, Math.sin(a) * 2.5], r: [Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7] });
+    const a = (i / 6) * Math.PI * 2 + r.range(-0.3, 0.3), d = r.range(0.35, 0.7), rt = r.range(0.35, 0.5), rb = r.range(0.5, 0.7);
+    stems.push({ a, d, rb, rt });
+    m.cyl(rt, rb, 6.6, 7, i % 2 ? BARK : BARK2, { p: [Math.cos(a) * d, 3.3, Math.sin(a) * d], r: [Math.sin(a) * 0.06, 0, -Math.cos(a) * 0.06] });
+    m.cone(0.42, 0.9, 8, BARK2, { p: [Math.cos(a) * (d + 0.45), 0.4, Math.sin(a) * (d + 0.45)], r: [Math.PI + Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45] });
   }
-  // aerial roots
-  for (let i = 0; i < 16; i++) {
-    const a = r.range(0, Math.PI * 2), d = r.range(3, 7.5), h = r.range(4.5, 7);
-    m.cyl(0.08, 0.12, h, 4, 0x8a7a66, { p: [Math.cos(a) * d, h / 2, Math.sin(a) * d] });
+  m.sphere(1.5, 8, 6, BARK, { p: [0, 6.5, 0], s: [1, 0.7, 1] });
+  // limbs: chains of tapering segments that rise off the trunk and sag toward the tips, each with a
+  // side branch; roots hang from points on them and leaf clumps sit on their tips and joints
+  type Pt = [number, number, number];
+  const branches: { pts: Pt[]; r0: number; r1: number }[] = [];
+  const grow = (from: Pt, a: number, len: number, rise: number, n: number, r0: number, r1: number) => {
+    const pts: Pt[] = [from];
+    for (let k = 1; k <= n; k++) {
+      const t = k / n, d = len * t;
+      pts.push([from[0] + Math.cos(a + 0.12 * t) * d + r.range(-0.15, 0.15), from[1] + rise * Math.sin(t * Math.PI * 0.6) - 0.9 * t * t + r.range(-0.1, 0.1), from[2] + Math.sin(a + 0.12 * t) * d + r.range(-0.15, 0.15)]);
+    }
+    branches.push({ pts, r0, r1 });
+    return pts;
+  };
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + r.range(-0.25, 0.25);
+    const main = grow([Math.cos(a) * 0.8, 6.4, Math.sin(a) * 0.8], a, r.range(8.5, 10.5), r.range(1.4, 2.0), 5, 0.38, 0.1);
+    grow(main[2], a + (i % 2 ? 0.6 : -0.6), r.range(3, 4.5), 1.0, 3, 0.18, 0.06);
   }
-  // canopy
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2;
-    m.ico(r.range(2.6, 3.6), 0, i % 2 ? 0x3f6a34 : 0x4a7a3a, { p: [Math.cos(a) * r.range(3, 6), r.range(7.5, 9), Math.sin(a) * r.range(3, 6)], s: [1.2, 0.7, 1.2] });
+  const at = (pts: Pt[], t: number): Pt => {
+    const f = t * (pts.length - 1), k = Math.min(pts.length - 2, Math.floor(f)), u = f - k;
+    const A = pts[k], B = pts[k + 1];
+    return [A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[2] + (B[2] - A[2]) * u];
+  };
+  for (const { pts, r0, r1 } of branches) {
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const ra = r0 + (r1 - r0) * (k / (pts.length - 1)), rb = r0 + (r1 - r0) * ((k + 1) / (pts.length - 1));
+      rod(m, pts[k], pts[k + 1], ra, rb, 6, k % 2 ? BARK : BARK2);
+      if (k > 0) m.sphere(ra * 1.05, 6, 4, BARK, { p: pts[k] });
+    }
   }
-  m.ico(4, 0, 0x45723a, { p: [0, 9.5, 0], s: [1.4, 0.6, 1.4] });
+  // roots: from a point on a branch, a few slightly wavy segments, thinning as they go
+  const root = (top: Pt, len: number, w0: number, w1: number, toGround: boolean) => {
+    const n = 3;
+    let prev = top;
+    const bottomY = toGround ? 0 : top[1] - len;
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      const p: Pt = [top[0] + (k < n || !toGround ? r.range(-0.12, 0.12) : r.range(-0.25, 0.25)), top[1] + (bottomY - top[1]) * t, top[2] + (k < n || !toGround ? r.range(-0.12, 0.12) : r.range(-0.25, 0.25))];
+      rod(m, prev, p, w0 + (w1 - w0) * ((k - 1) / n), w0 + (w1 - w0) * t, 4, toGround ? BARK2 : HANG);
+      prev = p;
+    }
+  };
+  for (const [bi, { pts }] of branches.entries()) {
+    const main = bi % 2 === 0;
+    for (let k = 0; k < (main ? 9 : 4); k++) {
+      const t = r.range(0.2, 0.95), p = at(pts, t);
+      root([p[0], p[1] - 0.05, p[2]], r.range(1.2, Math.min(4.5, p[1] - 1)), 0.035, 0.015, false);
+    }
+    if (main) for (const t of [0.55, 0.8]) {
+      const p = at(pts, t);
+      for (let k = 0; k < 2; k++) {
+        const thick = r.chance(0.12);
+        root([p[0] + r.range(-0.2, 0.2), p[1] - 0.05, p[2] + r.range(-0.2, 0.2)], p[1], thick ? 0.12 : 0.07, thick ? 0.17 : 0.1, true);
+      }
+    }
+  }
+  // canopy: leaf clumps on the branch tips and joints, a wide low dome over the centre
+  for (const [bi, { pts }] of branches.entries()) {
+    const main = bi % 2 === 0;
+    for (const k of main ? [2, 3, 4, 5] : [2, 3]) {
+      const p = pts[k];
+      m.ico(main ? r.range(2.4, 3.2) : r.range(1.8, 2.4), 1, (bi + k) % 3 ? 0x3a6230 : 0x467238, { p: [p[0], p[1] + 1.2, p[2]], s: [1.3, 0.55, 1.3] });
+    }
+  }
+  m.ico(5, 1, 0x3f6a34, { p: [0, 10.6, 0], s: [1.6, 0.4, 1.6] });
   // sacred threads tied around the trunk
-  for (let i = 0; i < 3; i++) m.add(new THREE.TorusGeometry(1.45 + i * 0.03, 0.03, 4, 18), [0xc8302a, 0xe8a03a, 0xf2f2ee][i], { p: [0, 1.3 + i * 0.15, 0], r: [Math.PI / 2, 0, 0] });
+  // (each thread follows the trunk's outline at its height: the convex hull round the stems, eased
+  // out a little; the stems lean out, so they sit 0.06 m closer in per metre below mid-height)
+  const outline = (y: number): [number, number][] => {
+    const pts: [number, number][] = [];
+    for (const st of stems) {
+      const d = st.d - 0.06 * (3.3 - y), rad = st.rb + (st.rt - st.rb) * (y / 6.6) + 0.03;
+      for (let k = 0; k < 14; k++) pts.push([Math.cos(st.a) * d + Math.cos((k / 14) * Math.PI * 2) * rad, Math.sin(st.a) * d + Math.sin((k / 14) * Math.PI * 2) * rad]);
+    }
+    pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    const cross = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lower: [number, number][] = [], upper: [number, number][] = [];
+    for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
+    for (const p of [...pts].reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
+    return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+  };
+  for (let i = 0; i < 3; i++) {
+    const y = 1.6 + i * 0.15, hull = outline(y), col = [0xc8302a, 0xe8a03a, 0xf2f2ee][i];
+    hull.forEach(([x, z], k) => {
+      const [nx, nz] = hull[(k + 1) % hull.length];
+      rod(m, [x, y, z], [nx, y, nz], 0.025, 0.025, 4, col);
+    });
+  }
   // small whitewashed platform and shrine, with lamps
   m.box(5, 0.5, 5, 0xe8e4dc, { p: [0, 0.25, -3.2] });
   m.box(1, 1.1, 0.9, 0xf2efe6, { p: [0, 1.05, -4.6] });
@@ -299,6 +394,7 @@ registerBuilder('teaestate', (m, _g, s, r, out) => {
   sm.position.set(0, 2.2, -0.08);
   sm.rotation.y = Math.PI;
   out.extras.push(sm);
+  m.box(3.3, 1.4, 0.04, 0x5a5f66, { p: [0, 2.2, -0.04] });
   for (let i = 0; i < 4; i++) {
     const x = r.range(-25, 25), z = r.range(10, 50);
     m.cyl(0.12, 0.2, 9, 5, 0xb8b0a0, { p: [x, 4.5, z] });

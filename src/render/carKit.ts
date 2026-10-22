@@ -41,6 +41,15 @@ export function beam(m: ModelBuilder, a: P3, b: P3, w: number, d: number, color:
   m.box(w, len, d, color, { p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], r: [_e.x, _e.y, _e.z] });
 }
 
+/** round tapering rod from a (radius r0) to b (radius r1) */
+export function rod(m: ModelBuilder, a: P3, b: P3, r0: number, r1: number, seg: number, color: number) {
+  _v.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const len = _v.length();
+  if (len < 1e-4) return;
+  _e.setFromQuaternion(_q.setFromUnitVectors(UP, _v.normalize()));
+  m.cyl(r1, r0, len, seg, color, { p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], r: [_e.x, _e.y, _e.z] });
+}
+
 /** side profile given as (z, y) points in order around the outline, extruded across x and centred on cx */
 export function profile(m: ModelBuilder, pts: P2[], width: number, color: number, cx = 0) {
   const sh = new THREE.Shape(pts.map(([z, y]) => new THREE.Vector2(z, y)));
@@ -54,17 +63,17 @@ export function section(m: ModelBuilder, pts: P2[], z0: number, z1: number, colo
 }
 
 /**
- * Lofted solid: one convex cross-section (x, y) placed at stations along z, each scaled in x about 0
+ * Lofted solid: one convex cross-section (x, y) placed at stations along z, each scaled in x about cx
  * and in y about baseY. Faces take colorAt(y) of the section edge they come from (unscaled y), so a
  * colour band follows the section even where the ends are squashed.
  */
-export function loft(m: ModelBuilder, shape: P2[], stations: { z: number; sx: number; sy?: number }[], baseY: number, colorAt: (y: number) => number, capColor?: [number, number]) {
-  const ring = (st: { z: number; sx: number; sy?: number }): P3[] => shape.map(([x, y]) => [x * st.sx, baseY + (y - baseY) * (st.sy ?? 1), st.z]);
+export function loft(m: ModelBuilder, shape: P2[], stations: { z: number; sx: number; sy?: number }[], baseY: number, colorAt: (y: number) => number, capColor?: [number, number], cx = 0) {
+  const ring = (st: { z: number; sx: number; sy?: number }): P3[] => shape.map(([x, y]) => [cx + x * st.sx, baseY + (y - baseY) * (st.sy ?? 1), st.z]);
   const rings = stations.map(ring);
   const cy = shape.reduce((s, p) => s + p[1], 0) / shape.length;
   for (let i = 0; i + 1 < rings.length; i++) {
     const a = rings[i], b = rings[i + 1];
-    const center: P3 = [0, cy, (stations[i].z + stations[i + 1].z) / 2];
+    const center: P3 = [cx, cy, (stations[i].z + stations[i + 1].z) / 2];
     for (let j = 0; j < shape.length; j++) {
       const k = (j + 1) % shape.length;
       skin(m, [a[j], a[k], b[k], b[j]], colorAt((shape[j][1] + shape[k][1]) / 2), center);
@@ -73,8 +82,8 @@ export function loft(m: ModelBuilder, shape: P2[], stations: { z: number; sx: nu
   if (capColor) {
     const f = rings[0], l = rings[rings.length - 1];
     const dir = Math.sign(stations[stations.length - 1].z - stations[0].z);
-    face(m, f, capColor[0], [0, cy, stations[0].z - dir]);
-    face(m, l, capColor[1], [0, cy, stations[stations.length - 1].z + dir]);
+    face(m, f, capColor[0], [cx, cy, stations[0].z - dir]);
+    face(m, l, capColor[1], [cx, cy, stations[stations.length - 1].z + dir]);
   }
 }
 

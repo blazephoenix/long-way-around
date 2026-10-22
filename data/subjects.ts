@@ -76,7 +76,7 @@ export const SUBJECTS: SubjectDef[] = [
   { id: 'barn', name: 'Brick kiln chimney', page: 'farm', tier: 'common', kind: 'landmark', hint: 'A tall chimney over the wheat, bricks drying round it.', size: [4, 32], site: 'barn' },
   { id: 'windmill', name: 'Wind turbine', page: 'farm', tier: 'common', kind: 'landmark', hint: 'Slow white blades over the plains.', size: [8, 42], site: 'windmill' },
   { id: 'silo', name: 'Straw stacks', page: 'farm', tier: 'common', kind: 'landmark', hint: 'Last harvest, stacked and capped for the cattle.', size: [8, 6], site: 'silo' },
-  { id: 'banyan', name: 'Banyan shrine', page: 'farm', tier: 'uncommon', kind: 'landmark', hint: 'A great tree with a small shrine at its roots, beside the road.', size: [9, 12], site: 'banyan', india: true },
+  { id: 'banyan', name: 'Banyan shrine', page: 'farm', tier: 'uncommon', kind: 'landmark', hint: 'A great tree with a small shrine at its roots, beside the road.', size: [20, 13], site: 'banyan', india: true },
   { id: 'rainbow', name: 'Rainbow', page: 'farm', tier: 'rare', kind: 'sky', hint: 'After rain, with the sun low behind you.', size: [0, 0] },
   { id: 'lightning', name: 'Lightning', page: 'farm', tier: 'rare', kind: 'sky', hint: 'Storms roll across the open plains.', size: [0, 0] },
   { id: 'kites', name: 'Kite festival sky', page: 'farm', tier: 'rare', kind: 'sky', hint: 'On rare clear days, the sky over fields and towns fills with kites.', size: [0, 0], india: true },

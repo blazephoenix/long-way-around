@@ -2,7 +2,7 @@
 // Every model is authored in local space: origin on the ground, -z faces the road.
 import * as THREE from 'three';
 import { ModelBuilder } from './models';
-import { arch, beam, Greenhouse, profile, wheel } from './carKit';
+import { arch, beam, Greenhouse, loft, profile, wheel } from './carKit';
 import { waterLight, waterMaterial, waterGeometry } from './water';
 import { discWater } from '../world/waterGeo';
 import { BIOMES } from '../../data/biomes';
@@ -143,6 +143,10 @@ const B: Record<string, Builder> = {
     }
     m.cyl(1.9, 1.9, 0.3, 12, 0x2a2a2a, { p: [0, 18.2, 0] });
     m.cyl(2.1, 2.1, 0.1, 12, 0x2a2a2a, { p: [0, 18.9, 0] });
+    for (let i = 0; i < 16; i++) m.box(0.05, 0.8, 0.05, 0x2a2a2a, { p: [Math.cos((i / 16) * Math.PI * 2) * 2.0, 19.35, Math.sin((i / 16) * Math.PI * 2) * 2.0] });
+    m.torus(2.0, 0.04, 4, 32, 0x2a2a2a, { p: [0, 19.75, 0], r: [Math.PI / 2, 0, 0] });
+    m.box(0.9, 1.9, 0.1, 0x3a2a20, { p: [0, 0.95, -2.6] });
+    for (const y of [5.5, 10, 14.5]) m.box(0.45, 0.65, 0.1, 0x2a3440, { p: [0, y, -(2.6 - (y / 18) * 1.3) - 0.02] });
     m.cyl(1.0, 1.0, 1.6, 8, 0x3a4a5a, { p: [0, 19.2, 0] });
     m.cone(1.3, 1.4, 8, 0xc8403a, { p: [0, 20.7, 0] });
     g.cyl(0.85, 0.85, 1.4, 8, 0xfff2b0, { p: [0, 19.2, 0] });
@@ -160,6 +164,20 @@ const B: Record<string, Builder> = {
     m.box(0.1, 0.8, 30, WOOD_D, { p: [1.55, 1.7, 14] });
     m.box(2.4, 2.2, 2.4, 0xe8e0cc, { p: [0, 2.4, 29] });
     m.cone(2, 1, 4, 0x4f6f8f, { p: [0, 4, 29], r: [0, Math.PI / 4, 0] });
+    // wooden fishing boats moored either side: a hull lofted to points at both ends with a painted
+    // band along the gunwale, thwarts, a heap of net and a pole with a flag
+    const hull: [number, number][] = [[-0.85, 0.3], [-0.8, -0.1], [-0.45, -0.35], [0.45, -0.35], [0.8, -0.1], [0.85, 0.3]];
+    for (const [x, z, body, band] of [[-3.3, 9, 0x2a5ab8, 0xf2efe6], [3.4, 19, 0xc8302a, 0xf2c230]] as const) {
+      const st = [[-3.6, 0.05, 0.9], [-3.0, 0.55, 1], [-1.8, 0.92, 1], [1.8, 0.92, 1], [3.0, 0.55, 1], [3.6, 0.05, 0.9]].map(([dz, sx, sy]) => ({ z: z + dz, sx, sy }));
+      loft(m, hull, st, -0.35, (y) => (y > 0.1 ? band : body), [band, band], x);
+      for (const dz of [-1.6, 0, 1.6]) m.box(1.5, 0.06, 0.22, WOOD, { p: [x, 0.15, z + dz] });
+      m.sphere(1, 8, 5, 0x2f4a3a, { p: [x, 0.05, z + 0.8], s: [0.55, 0.3, 0.7] });
+      m.cyl(0.04, 0.05, 2.6, 5, WOOD_D, { p: [x, 1.3, z - 2.4] });
+      m.shape([[0, 0], [0.7, -0.2], [0, -0.4]], 0.02, band === 0xf2efe6 ? 0xc8302a : 0x2a8a4a, { p: [x + 0.02, 2.55, z - 2.4] });
+    }
+    // nets drying on the planks, with floats
+    m.sphere(1, 10, 6, 0x2f4a3a, { p: [0.4, 1.3, 6], s: [1.1, 0.35, 1.6] });
+    for (let i = 0; i < 6; i++) m.sphere(0.12, 6, 4, 0xe8742a, { p: [0.4 + Math.cos(i) * 0.9, 1.55, 6 + Math.sin(i) * 1.3] });
   },
   seastack: (m, _g, _s, r) => {
     const n = r.int(2, 4);
@@ -314,13 +332,27 @@ const B: Record<string, Builder> = {
     for (let i = 0; i < 5; i++) {
       const w = 5.2 - i * 0.9;
       m.box(w, 1.1, w, i % 2 ? stone : 0xa89a82, { p: [0, 5.9 + i * 1.1, 0] });
+      // a small shrine form at each corner of the tier
+      if (i < 4) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        m.box(0.45, 0.4, 0.45, stone, { p: [sx * (w / 2 - 0.3), 6.65 + i * 1.1, sz * (w / 2 - 0.3)] });
+        m.cone(0.3, 0.3, 4, 0xa89a82, { p: [sx * (w / 2 - 0.3), 7.0 + i * 1.1, sz * (w / 2 - 0.3)], r: [0, Math.PI / 4, 0] });
+      }
     }
     m.sphere(0.6, 8, 6, 0xc9a24a, { p: [0, 11.6, 0] });
     m.box(1.6, 2.6, 0.2, 0x3a2a20, { p: [0, 2.7, -2.55] });
-    for (const x of [-1.6, 1.6]) {
-      m.cyl(0.25, 0.3, 4, 8, stone, { p: [x, 3.4, -3.1] });
-      m.cyl(0.15, 0.2, 0.3, 6, 0x9a6a3a, { p: [x * 0.8, 1.55, -4] });
-      g.cone(0.08, 0.22, 5, 0xffb84a, { p: [x * 0.8, 1.82, -4] });
+    // mandapa: a pillared porch on its own plinth before the door, steps down to the ground, lamps
+    // lit on its front corners
+    m.box(4.8, 1.4, 2.8, 0x9a8f7c, { p: [0, 0.7, -4.8] });
+    for (let i = 0; i < 3; i++) m.box(2.4, 0.45, 0.45, 0x9a8f7c, { p: [0, 0.22 + i * 0.45, -6.95 + i * 0.45] });
+    for (const x of [-1.8, 1.8]) for (const z of [-3.7, -5.8]) {
+      m.cyl(0.18, 0.22, 2.6, 8, stone, { p: [x, 2.7, z] });
+      m.box(0.55, 0.2, 0.55, stone, { p: [x, 4.05, z] });
+    }
+    m.box(4.6, 0.3, 3.2, stone, { p: [0, 4.3, -4.75] });
+    m.box(4.8, 0.35, 0.2, 0xa89a82, { p: [0, 4.6, -6.25] });
+    for (const x of [-2.0, 2.0]) {
+      m.cyl(0.15, 0.2, 0.3, 6, 0x9a6a3a, { p: [x, 1.55, -6.0] });
+      g.cone(0.08, 0.22, 5, 0xffb84a, { p: [x, 1.82, -6.0] });
     }
     // marigold garland across the door
     for (let i = 0; i < 9; i++) {

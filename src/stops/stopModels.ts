@@ -250,10 +250,27 @@ export function buildStand(m: ModelBuilder, g: ModelBuilder, site: Site, r: Rng,
   for (const [x, z] of [[-2, -1], [2, -1], [-2, 1.5], [2, 1.5]]) m.box(0.15, 2.6, 0.15, 0x6a4a34, { p: [x, 1.3, z] });
   m.box(5, 0.12, 3.4, r.pick([0xd9573a, 0x3a7a6a, 0xe8a03a, 0x3a5a9a]), { p: [0, 2.7, 0.2], r: [0.12, 0, 0] });
   m.box(4.2, 1.0, 0.8, 0x8a6448, { p: [0, 0.5, -1] });
-  for (let i = 0; i < 6; i++) m.box(0.6, 0.35, 0.5, i % 2 ? 0xe8742a : 0x7fae4a, { p: [-1.6 + i * 0.64, 1.2, -1] });
+  // crates heaped with fruit: oranges, guavas, apples, mangoes, bananas, pomegranates
+  const FRUIT = [0xe8842a, 0x9ac84a, 0xc8302a, 0xf2b830, 0xf2d84a, 0xa82a3a];
+  for (let i = 0; i < 6; i++) {
+    const x = -1.6 + i * 0.64;
+    m.box(0.6, 0.18, 0.5, 0xb8945a, { p: [x, 1.09, -1] });
+    for (let k = 0; k < 7; k++) {
+      const [fx, fz, fy] = [[-0.16, -0.12, 0], [0, -0.12, 0], [0.16, -0.12, 0], [-0.16, 0.12, 0], [0, 0.12, 0], [0.16, 0.12, 0], [0, 0, 0.13]][k];
+      if (i === 4) m.box(0.22, 0.05, 0.06, FRUIT[i], { p: [x + fx, 1.25 + fy, -1 + fz], r: [0, 0, 0.3] });
+      else m.sphere(0.085, 6, 4, FRUIT[i], { p: [x + fx, 1.27 + fy, -1 + fz] });
+    }
+  }
+  // a hanging balance scale from the roof beam
+  m.box(0.03, 0.5, 0.03, 0x5a5f66, { p: [1.6, 2.3, -0.7] });
+  m.box(0.6, 0.03, 0.03, 0x5a5f66, { p: [1.6, 2.05, -0.7] });
+  for (const sx of [-0.28, 0.28]) {
+    m.box(0.01, 0.35, 0.01, 0x5a5f66, { p: [1.6 + sx, 1.87, -0.7] });
+    m.cyl(0.12, 0.08, 0.04, 8, 0xb8bcc0, { p: [1.6 + sx, 1.68, -0.7] });
+  }
   g.sphere(0.12, 6, 4, 0xffd890, { p: [0, 2.4, -0.6] });
   addSign(out, 'ROADSIDE\nSTAND', st, 1.8, 0.8, -3.6, 1.4, -2.2);
-  m.box(0.1, 1.2, 0.1, 0x6a4a34, { p: [-3.6, 0.6, -2.15] });
+  m.box(0.07, 1.2, 0.07, 0x6a4a34, { p: [-3.6, 0.6, -2.16] }); // between the two faces
 }
 
 registerBuilder('gas', buildGas);

@@ -333,7 +333,8 @@ function indiaRoad(world: World, out: Site[], c: number, biome: BiomeId) {
       out.push({ id: `hp:${seg}:${i}`, kind: 'hairpin', cat: 'deco', x: r.x + r.nx * u, z: r.z + r.nz * u, s, side: 1, heading: Math.atan2(-r.tx, -r.tz), clear: 2, biome, text: `HAIRPIN BEND\n${i + 1}/${bends.length}` });
     });
   }
-  // speed breaker at the edge of a village, with its warning painted just after it
+  // speed breaker at the edge of a village, with a warning sign 16 m before it for each direction
+  // (the breaker-sign model faces its local -z, so each heading points that face at oncoming traffic)
   if ((biome === 'farm' || biome === 'coast' || biome === 'city') && townness(world, s0 + CHUNK / 2) > 0 && townness(world, s0 - CHUNK / 2) === 0) {
     const s = s0 + 25;
     const r = world.road(s);
@@ -341,6 +342,8 @@ function indiaRoad(world: World, out: Site[], c: number, biome: BiomeId) {
     const r2 = world.road(s + 16);
     const u = ROAD_HALF + 1.2;
     out.push({ id: `sbs:${c}`, kind: 'breakersign', cat: 'deco', x: r2.x + r2.nx * u, z: r2.z + r2.nz * u, s: s + 16, side: 1, heading: Math.atan2(-r2.tx, -r2.tz), clear: 1.5, biome, text: 'SPEED BREAKER\nAHEAD' });
+    const r3 = world.road(s - 16);
+    out.push({ id: `sbs2:${c}`, kind: 'breakersign', cat: 'deco', x: r3.x - r3.nx * u, z: r3.z - r3.nz * u, s: s - 16, side: -1, heading: Math.atan2(r3.tx, r3.tz), clear: 1.5, biome, text: 'SPEED BREAKER\nAHEAD' });
   }
 }
 
