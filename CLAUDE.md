@@ -19,9 +19,9 @@ URL flags for manual checks: `?seed=lantern` (fixed world), `?play` (skip title)
 
 ### Checking the game in a browser
 
-Use the T3 Code preview browser (`mcp__t3-code__preview_*` tools) for visual checks, not Playwright. Run `npm run dev` in the background, then `preview_open` on `localhost:5173/?seed=lantern&play&auto&q=low&fps`, and use `preview_snapshot` for screenshots. The preview tools only work while the T3 Code desktop app is open and connected. If `preview_open` reports no automation host, tell the user and stop rather than falling back to Playwright.
+Use the Claude desktop app's built-in browser (`Claude_Browser` tools) for visual checks. Run `npm run dev` in the background, then `preview_start` on `localhost:5173/?seed=lantern&play&auto&q=low&fps`, and take screenshots with `computer` (action `screenshot`). The tools exist only when the session runs in the Claude desktop app; if they are missing or cannot reach the app, tell the user and stop.
 
-Drive the game with `preview_evaluate` through the debug globals set in `src/main.ts` / `App.newGame`: `window.__game`, `__app`, `__sites`, `__subjects`, `__features`, `__chunkGen`. Typical pattern: `g.stop()`, `g.spawnAt(g.findBiome('city'))`, `g.simulate(seconds)`, then render a frame with `g.tick(1/60, true)`. Before taking a screenshot, wait until `g.streamer.tilesPending === 0`. Two shortcuts: `g.lookAtSite(kind)` frames a site, and `g.renderer.info.render` gives draw calls and triangles.
+Drive the game by running JavaScript in the page through the debug globals set in `src/main.ts` / `App.newGame`: `window.__game`, `__app`, `__sites`, `__subjects`, `__features`, `__chunkGen`. Typical pattern: `g.stop()`, `g.spawnAt(g.findBiome('city'))`, `g.simulate(seconds)`, then render a frame with `g.tick(1/60, true)`. Before taking a screenshot, wait until `g.streamer.tilesPending === 0`. Two shortcuts: `g.lookAtSite(kind)` frames a site, and `g.renderer.info.render` gives draw calls and triangles.
 
 `scripts/*.mjs` holds the original Playwright versions of these checks (screenshots, `perf.mjs` → `perf-log.txt`, milestone checks `m3check`–`m6check`). Read them for recipes, not to run: they import Playwright from a sandbox path (`/opt/npm-tools/...`) that does not exist here.
 
