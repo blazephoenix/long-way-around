@@ -32,7 +32,7 @@ const DUSKY: Window[] = ['golden', 'blue'];
 export const SUBJECTS: SubjectDef[] = [
   // ---------------- forest
   { id: 'deer', name: 'Deer', page: 'forest', tier: 'common', kind: 'wildlife', hint: 'Grazes in clearings, most often in daylight.', spawn: { place: 'meadow', perChunk: 0.9, windows: ['dawn', 'golden', 'morning', 'afternoon'], group: [1, 3] }, size: [0.9, 1.4], model: 'deer' },
-  { id: 'elk', name: 'Elk', page: 'forest', tier: 'uncommon', kind: 'wildlife', hint: 'Keeps to wide clearings away from the road.', spawn: { place: 'meadow', perChunk: 0.22, windows: ALLDAY, group: [1, 2] }, size: [1.3, 2.2], model: 'elk' },
+  { id: 'elk', name: 'Sambar', page: 'forest', tier: 'uncommon', kind: 'wildlife', hint: 'A big dark deer that keeps to wide clearings away from the road.', spawn: { place: 'meadow', perChunk: 0.22, windows: ALLDAY, group: [1, 2] }, size: [1.3, 2.2], model: 'elk' },
   { id: 'fox', name: 'Red fox', page: 'forest', tier: 'uncommon', kind: 'wildlife', hint: 'Trots the forest edge around dawn and dusk.', spawn: { place: 'trees', perChunk: 0.3, windows: ['dawn', 'golden', 'blue'] }, size: [0.5, 0.5], model: 'fox' },
   { id: 'heron', name: 'Grey heron', page: 'forest', tier: 'rare', kind: 'wildlife', hint: 'Seen near lakes at first light.', spawn: { place: 'lake', perChunk: 0.9, windows: ['dawn'] }, size: [0.5, 1.0], model: 'heron' },
   { id: 'owl', name: 'Owl', page: 'forest', tier: 'rare', kind: 'wildlife', hint: 'After dark, where the pines come close to the road.', spawn: { place: 'trees', perChunk: 0.35, windows: ['night'] }, size: [0.3, 0.4], model: 'owl' },
@@ -45,7 +45,7 @@ export const SUBJECTS: SubjectDef[] = [
 
   // ---------------- coast
   { id: 'gull', name: 'Seagull', page: 'coast', tier: 'common', kind: 'wildlife', hint: 'Always overhead where land meets sea.', spawn: { place: 'air', perChunk: 1.2, windows: [...ALLDAY, 'blue'], group: [1, 3] }, size: [0.5, 0.3], model: 'gull' },
-  { id: 'seal', name: 'Seal', page: 'coast', tier: 'uncommon', kind: 'wildlife', hint: 'Hauls out on the shore when the sun is up.', spawn: { place: 'shore', perChunk: 0.35, windows: ['morning', 'midday', 'afternoon'], group: [1, 3] }, size: [0.8, 0.6], model: 'seal' },
+  { id: 'seal', name: 'Olive ridley turtle', page: 'coast', tier: 'uncommon', kind: 'wildlife', hint: 'Hauls out on the sand when the sun is up.', spawn: { place: 'shore', perChunk: 0.35, windows: ['morning', 'midday', 'afternoon'], group: [1, 3] }, size: [0.8, 0.6], model: 'seal' },
   { id: 'whale', name: 'Whale', page: 'coast', tier: 'rare', kind: 'wildlife', hint: 'Surfaces offshore at dawn.', spawn: { place: 'offshore', perChunk: 0.45, windows: ['dawn', 'golden'] }, size: [4, 2], model: 'whale' },
   { id: 'lighthouse', name: 'Lighthouse', page: 'coast', tier: 'common', kind: 'landmark', hint: 'On the headlands.', size: [3, 21], site: 'lighthouse' },
   { id: 'pier', name: 'Pier', page: 'coast', tier: 'common', kind: 'landmark', hint: 'Where the beach is gentle.', size: [10, 4], site: 'pier' },
@@ -56,7 +56,7 @@ export const SUBJECTS: SubjectDef[] = [
   // ---------------- desert
   { id: 'lizard', name: 'Lizard', page: 'desert', tier: 'common', kind: 'wildlife', hint: 'Basks on warm rocks in the middle of the day.', spawn: { place: 'rocks', perChunk: 0.9, windows: ['morning', 'midday', 'afternoon'] }, size: [0.2, 0.1], model: 'lizard' },
   { id: 'hawk', name: 'Hawk', page: 'desert', tier: 'uncommon', kind: 'wildlife', hint: 'Circles high over open ground by day.', spawn: { place: 'air', perChunk: 0.4, windows: ALLDAY }, size: [0.6, 0.3], model: 'hawk' },
-  { id: 'coyote', name: 'Coyote', page: 'desert', tier: 'rare', kind: 'wildlife', hint: 'Comes out as the light goes.', spawn: { place: 'scrub', perChunk: 0.35, windows: DUSKY }, size: [0.6, 0.7], model: 'coyote' },
+  { id: 'coyote', name: 'Golden jackal', page: 'desert', tier: 'rare', kind: 'wildlife', hint: 'Comes out as the light goes.', spawn: { place: 'scrub', perChunk: 0.35, windows: DUSKY }, size: [0.6, 0.7], model: 'coyote' },
   { id: 'camel', name: 'Camels', page: 'desert', tier: 'common', kind: 'wildlife', hint: 'Patient travellers on the open sand.', spawn: { place: 'scrub', perChunk: 0.6, windows: [...ALLDAY], group: [1, 3] }, size: [1.3, 2.2], model: 'camel', india: true },
   { id: 'blackbuck', name: 'Blackbuck', page: 'desert', tier: 'uncommon', kind: 'wildlife', hint: 'Grazes the scrub edges in the cool of morning.', spawn: { place: 'scrub', perChunk: 0.3, windows: ['dawn', 'golden', 'morning'], group: [2, 4] }, size: [0.7, 1.1], model: 'blackbuck', india: true },
   { id: 'watertower', name: 'Overhead water tank', page: 'desert', tier: 'common', kind: 'landmark', hint: 'The village tank, visible for kilometres.', size: [7, 15], site: 'watertower' },
@@ -93,6 +93,7 @@ export const SUBJECTS: SubjectDef[] = [
 
   // ---------------- city
   { id: 'pigeon', name: 'Pigeons', page: 'city', tier: 'common', kind: 'wildlife', hint: 'On every ledge in town.', spawn: { place: 'town', perChunk: 1.0, windows: ALLDAY, group: [2, 5] }, size: [0.15, 0.15], model: 'pigeon' },
+  { id: 'dog', name: 'Street dog', page: 'city', tier: 'common', kind: 'wildlife', hint: 'Naps in the shade by shop fronts and dhabas, and trots the street at dusk.', spawn: { place: 'town', perChunk: 0.7, windows: ALLDAY, group: [1, 3] }, size: [0.6, 0.6], model: 'dog', india: true },
   { id: 'cat', name: 'Street cat', page: 'city', tier: 'common', kind: 'wildlife', hint: 'Sunning on a doorstep, or prowling after dark.', spawn: { place: 'town', perChunk: 0.5, windows: ['morning', 'midday', 'blue', 'night'] }, size: [0.25, 0.3], model: 'cat' },
   { id: 'skyline', name: 'Skyline at blue hour', page: 'city', tier: 'uncommon', kind: 'sky', hint: 'Towers lit against the deep blue after sunset.', size: [0, 0] },
   { id: 'streetlights', name: 'Night street', page: 'city', tier: 'common', kind: 'sky', hint: 'A town road under its streetlights.', size: [0, 0] },

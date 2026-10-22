@@ -5,6 +5,7 @@ import { World, CHUNK, ROAD_HALF, SEA_LEVEL } from '../world/world';
 import { hashInts, Rng, SYS } from '../world/prng';
 import { SUBJECTS, SubjectDef, Window } from '../../data/subjects';
 import { makeAnimal } from '../render/animalModels';
+import type { AnimalRig } from '../render/animalRig';
 import { townDensity, chunkSites } from '../world/sites';
 import { rareForSite } from './rare';
 import { FEATURES } from '../core/features';
@@ -215,6 +216,21 @@ export class Animals {
   }
 
   private behave(a: Active, dt: number) {
+    this.move(a, dt);
+    // pack animals: pick the clip for what the animal is doing, then advance it
+    const rig = a.obj.userData.rig as AnimalRig | undefined;
+    if (!rig || !a.obj.visible) return;
+    const gait = a.obj.userData.gait as string;
+    if (gait === 'still') return; // posed once (lying down)
+    if (a.state === 'flee') { rig.extra = []; rig.play('Gallop', 0.2); }
+    else if (a.state === 'walk') rig.play('Walk', 0.3);
+    else if (gait === 'whale') rig.play('Swim');
+    // grazers spend about half their standing time with their heads down
+    else rig.play(a.obj.userData.grazes && Math.sin(a.phase * 0.21 + a.uid.length) > 0 ? 'Eating' : 'Idle', 0.5);
+    rig.update(dt);
+  }
+
+  private move(a: Active, dt: number) {
     const o = a.obj;
     const gait = o.userData.gait as string;
     const limbs = o.userData.limbs as THREE.Object3D[];

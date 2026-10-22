@@ -9,6 +9,7 @@ import { shared, toon } from '../render/toon';
 import { nightGlow } from '../render/props';
 import { updateWaterLight } from '../render/water';
 import { loadPeople, type Rig } from '../render/peopleModels';
+import { loadAnimals } from '../render/animalPack';
 import { disposeTree } from '../render/models';
 import { EYE } from '../vehicle/cockpit';
 import { ASSETS, type Asset } from './assets';
@@ -24,7 +25,7 @@ const GAP = 4; // metres between cells
 const ROW_GAP = 14; // metres between groups
 
 export async function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
-  await loadPeople();
+  await Promise.all([loadPeople(), loadAnimals()]);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -253,9 +254,10 @@ export async function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
     controls.update();
     const p = placed[current];
     if (turntable && p.asset.view !== 'cockpit') for (const c of p.slot.children) if (!(c as THREE.Sprite).isSprite) c.rotation.y += dt * 0.5;
-    if (p.asset.group === 'People') p.slot.traverse((c) => {
+    if (p.asset.group === 'People' || p.asset.group === 'Animals') p.slot.traverse((c) => {
       const rig = c.userData.rig as Rig | undefined;
-      if (rig) { rig.play(walk ? 'Walk' : 'Idle'); rig.update(dt); }
+      const gait = c.userData.gait as string | undefined;
+      if (rig && gait !== 'still') { rig.play(gait === 'whale' ? 'Swim' : walk && gait !== 'sitter' ? 'Walk' : 'Idle'); rig.update(dt); }
     });
     sky.update(hour, controls.target, fog.color, { overcast: 0, milkyWay: 0, dim: 1 });
     nightGlow.value = THREE.MathUtils.smoothstep(sky.night, 0.2, 0.8) * 0.9;

@@ -75,6 +75,12 @@ function partOf(nodeName) {
   return { Head: 'head', Body: 'body', Legs: 'legs', Pants: 'legs', Feet: 'feet' }[m[1]] ?? 'head';
 }
 
+function dropAnimation(a) {
+  for (const c of a.listChannels()) c.dispose();
+  for (const s of a.listSamplers()) s.dispose();
+  a.dispose();
+}
+
 await MeshoptEncoder.ready;
 fs.mkdirSync(OUT, { recursive: true });
 for (const [family, spec] of Object.entries(FAMILIES)) {
@@ -82,7 +88,8 @@ for (const [family, spec] of Object.entries(FAMILIES)) {
   const doc = await source(family, names[0], spec.chars[names[0]]);
   const root = doc.getRoot();
   const scene = root.listScenes()[0];
-  for (const a of root.listAnimations()) if (!spec.clips.test(a.getName())) a.dispose();
+  // dispose a dropped clip's channels and samplers too, or prune() keeps their keyframe accessors
+  for (const a of root.listAnimations()) if (!spec.clips.test(a.getName())) dropAnimation(a);
   for (const a of root.listAnimations()) a.setName(a.getName().replace(/^.*\|(Man_|Female_)?/, ''));
   // one skin shared by every part
   const meshNodes = root.listNodes().filter((n) => n.getMesh());

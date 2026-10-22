@@ -280,7 +280,7 @@ const _pq = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _bq = new THRE
 /** Seated: thighs forward, shins down. */
 const SIT: [string, number][] = [['UpperLegL', 1.5], ['UpperLegR', 1.5], ['LowerLegL', -1.5], ['LowerLegR', -1.5]];
 
-/** Animation state for one person: a mixer over its own skeleton, plus posture offsets for age. */
+/** Animation state for one skinned character (people and animals): a mixer over its own skeleton, plus bend offsets on top of the clips. */
 export class Rig {
   readonly mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
@@ -294,16 +294,16 @@ export class Rig {
   /** further bends about the left-right axis, e.g. arms reaching for a handlebar */
   extra: [string, number][] = [];
 
-  constructor(private root: THREE.Object3D, private fam: Family, private baseRate: number) {
+  constructor(private root: THREE.Object3D, private clips: Map<string, THREE.AnimationClip>, private baseRate: number) {
     this.mixer = new THREE.AnimationMixer(root);
     root.traverse((o) => { if ((o as THREE.Bone).isBone) this.bones.set(o.name, o as THREE.Bone); });
   }
 
-  has(name: string) { return this.fam.clips.has(name); }
+  has(name: string) { return this.clips.has(name); }
 
   /** Cross-fade to a clip by name ('Walk', 'Idle', 'Wave', 'Interact', 'Sitting', 'Clapping'). */
   play(name: string, fade = 0.3, rate = 1) {
-    const clip = this.fam.clips.get(name) ?? this.fam.clips.get('Idle')!;
+    const clip = this.clips.get(name) ?? this.clips.get('Idle') ?? this.clips.values().next().value!;
     let a = this.actions.get(clip.name);
     if (!a) { a = this.mixer.clipAction(clip); this.actions.set(clip.name, a); }
     a.timeScale = rate * this.baseRate;
@@ -328,7 +328,7 @@ export class Rig {
    * Bend a bone about the person's left-right axis (positive folds forward), on top of the clip's
    * pose. The packs' bones have twisted local frames, so the axis is carried into the parent's frame.
    */
-  private bend(name: string, a: number) {
+  bend(name: string, a: number) {
     const b = this.bones.get(name);
     if (!b || !b.parent) return;
     (this.saved.get(b) ?? this.saved.set(b, new THREE.Quaternion()).get(b)!).copy(b.quaternion);
@@ -359,7 +359,7 @@ export function makePerson(look: PersonLook): THREE.Group {
   const skeleton = new THREE.Skeleton(fam.boneNames.map((n) => byName.get(n)!), fam.boneInverses.map((m) => m.clone()));
 
   // pose first: the stick and bag are placed against the idle pose, then mapped back to rest space
-  const rig = new Rig(root, fam, look.age === 'elder' ? 0.8 : 1);
+  const rig = new Rig(root, fam.clips, look.age === 'elder' ? 0.8 : 1);
   const head = byName.get('Head');
   if (head) head.scale.setScalar(AGE_HEAD[look.age]);
   if (look.age === 'elder') rig.stoop = 0.16;
