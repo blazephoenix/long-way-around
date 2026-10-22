@@ -1,6 +1,6 @@
 # Long Way Round
 
-A cozy first-person road trip on an endless, seeded road. Drive through six biomes, park anywhere, walk around, shoot film, develop it at roadside kiosks, refuel, and fill a photo journal. Everything (geometry, textures, music, sound) is generated in code. Built with Vite, TypeScript and Three.js.
+A cozy first-person road trip on an endless, seeded road. Drive through six biomes, park anywhere, walk around, shoot film, develop it at roadside kiosks, refuel, and fill a photo journal. Everything (geometry, textures, music, sound) is generated in code, except the people, who come from the Quaternius CC0 character packs. Built with Vite, TypeScript and Three.js.
 
 ## Run it
 

@@ -1,5 +1,6 @@
 // Short lines for people at stops. Warm, a little wry. Picked by biome, time of day and weather.
 // All text is original.
+import type { Age } from '../src/render/peopleModels';
 import type { Site } from '../src/world/sites';
 
 export interface LineCtx {
@@ -147,6 +148,8 @@ export interface Hitcher {
   who: string;
   india?: boolean;
   ride: [number, number]; // km
+  /** what the dialogue establishes about them; anything left out is rolled from the seed */
+  look?: { sex?: 'm' | 'f'; age?: Age };
   lines: string[];
   bye: string;
   tip: string; // {place} is replaced with the marked spot's description
@@ -154,7 +157,7 @@ export interface Hitcher {
 
 export const HITCHERS: Hitcher[] = [
   {
-    id: 'hiker', name: 'Mira', who: 'a hiker with a map she doesn\'t trust', ride: [3, 6],
+    id: 'hiker', name: 'Mira', who: 'a hiker with a map she doesn\'t trust', look: { sex: 'f' }, ride: [3, 6],
     lines: ['Thanks. My feet were filing a complaint.', 'This map says the road goes straight. The road disagrees.', 'I like a car with a radio. Leave it on, if you don\'t mind.', 'Do you ever just pull over to look at something? I do it all the time.'],
     bye: 'This is me. Thanks for the ride.',
     tip: 'Before you go: {place}. I marked it on your atlas.',
@@ -185,7 +188,7 @@ export const HITCHERS: Hitcher[] = [
     tip: 'Since you like photographs: {place}. On your map now.',
   },
   {
-    id: 'teacher', name: 'Mrs. Pillai', who: 'a retired schoolteacher visiting her old school', india: true, ride: [3, 6],
+    id: 'teacher', name: 'Mrs. Pillai', who: 'a retired schoolteacher visiting her old school', india: true, look: { sex: 'f', age: 'elder' }, ride: [3, 6],
     lines: ['Thirty-four years I taught geography. Now I finally see it.', 'My students write to me still. One is a pilot. One is a chef. Both are very loud.', 'Look at that cutting. Laterite. Red soil, made by centuries of monsoon. Remember that.', 'Do you know why the milestones have colours? Yellow means national highway. Green is state. Very sensible.'],
     bye: 'Here, here, near the gate. Romba nandri. Thank you very much.',
     tip: 'One more lesson, free of charge: {place}. I have marked it.',
@@ -197,7 +200,7 @@ export const HITCHERS: Hitcher[] = [
     tip: 'Driver to driver: {place}. Marked it.',
   },
   {
-    id: 'pilgrim', name: 'Rehana-bi', who: 'a pilgrim on her way to a dargah on the coast', india: true, ride: [3, 6],
+    id: 'pilgrim', name: 'Rehana-bi', who: 'a pilgrim on her way to a dargah on the coast', india: true, look: { sex: 'f', age: 'elder' }, ride: [3, 6],
     lines: ['Every year I go, since I was a girl. My knees go slower now, that\'s all.', 'The qawwali on Thursday evenings, you should hear it. Your heart sits down.', 'People from every village come. Hindu, Muslim, Christian, everyone ties a thread.', 'You are kind to stop. Not everyone stops.'],
     bye: 'Here is good, beta. Go safely.',
     tip: 'And a small thing: {place}. I asked the boy to mark it on your map.',

@@ -5,6 +5,9 @@ import * as THREE from 'three';
 import { ModelBuilder } from './models';
 import { signMesh } from './props';
 import { arc, arch, beam, Greenhouse, loft, profile, section, skin, wheel, type Cabin, type P2, type P3 } from './carKit';
+import { randomLook, seatedFigure } from './peopleModels';
+import { mulberry32 } from '../world/prng';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type VehicleKind = 'car' | 'hatch' | 'van' | 'truck' | 'bus' | 'tractor' | 'auto' | 'painted';
 
@@ -274,12 +277,11 @@ function auto(m: ModelBuilder, L: ModelBuilder, seed: number): VehicleModel {
   loft(m, cowl, [{ z: -1.0, sx: 0.45, sy: 0.8 }, { z: -0.97, sx: 0.72, sy: 0.92 }, { z: -0.92, sx: 0.9, sy: 0.98 }, { z: -0.84, sx: 1 }, { z: -0.58, sx: 1 }], 0.34, (y) => (y > BAND_Y ? band : lower), [lower, METAL]);
   m.box(0.15, 0.4, 0.03, METAL, { p: [0, 0.6, -1.0] }); // centre strip with the air vent
   for (let i = 0; i < 4; i++) m.box(0.11, 0.012, 0.02, 0x555555, { p: [0, 0.5 + i * 0.05, -1.017] });
-  // windshield: black frame with a centre divider, wiper; canvas hood overhangs it as a visor
+  // windshield frame with a centre divider; canvas hood overhangs it as a visor. No pane: glass
+  // can't be see-through with these materials, and the driver behind it is the point.
   const ws = (x: number, t: number): P3 => [x, 1.0 + 0.5 * t, -0.8 + 0.06 * t];
-  skin(m, [ws(-0.58, 0.04), ws(0.58, 0.04), ws(0.58, 0.96), ws(-0.58, 0.96)], GLASS, [0, 1.2, 0.5]);
   for (const x of [-0.6, 0, 0.6]) beam(m, ws(x, 0), ws(x, 1), x === 0 ? 0.025 : 0.045, 0.04, 0x1a1a1a);
   beam(m, ws(-0.6, 1), ws(0.6, 1), 0.04, 0.04, 0x1a1a1a);
-  beam(m, ws(0.05, 0.08), ws(0.4, 0.5), 0.015, 0.015, 0x1a1a1a);
   const canopy: P2[] = [[-0.66, 1.5], [0.66, 1.5], ...arc(0.52, 1.66, 0.14, 0, Math.PI / 2, 4), ...arc(-0.52, 1.66, 0.14, Math.PI / 2, Math.PI, 4)];
   section(m, canopy, -0.92, 1.32, hoodCol);
   // driver: seat on the engine cover, handlebar on its column
@@ -321,7 +323,33 @@ function auto(m: ModelBuilder, L: ModelBuilder, seed: number): VehicleModel {
     L.box(0.1, 0.05, 0.03, AMBER, { p: [sd * 0.42, 0.8, -0.945] });
     L.box(0.1, 0.14, 0.03, TAIL, { p: [sd * 0.52, 0.6, 1.355] });
   }
-  return { body: m.build(), lamps: L.build(), length: 2.6, width: 1.35, speed: [30, 45] };
+  return { body: withDriver(m.build(), seed), lamps: L.build(), length: 2.6, width: 1.35, speed: [30, 45] };
+}
+
+/** The auto's driver on the front seat, hands on the handlebar, mostly in the khaki uniform. */
+const DRIVERS = 12;
+const drivers = new Map<number, THREE.BufferGeometry | null>();
+
+function withDriver(body: THREE.BufferGeometry, seed: number): THREE.BufferGeometry {
+  // a small pool of drivers, each built once (about 5 ms) and merged into every auto that uses it
+  const k = seed % DRIVERS;
+  if (!drivers.get(k)) drivers.set(k, driver(k));
+  const fig = drivers.get(k);
+  if (!fig) return body;
+  const out = mergeGeometries([body, fig])!;
+  body.dispose();
+  out.computeBoundingSphere();
+  out.computeBoundingBox();
+  return out;
+}
+
+function driver(seed: number): THREE.BufferGeometry | null {
+  const r = mulberry32(seed * 13 + 5);
+  const look = randomLook(r, r() < 0.15 ? 'elder' : 'adult', 'm');
+  // short enough to sit under the hood, in 2 cm steps so the arm reach cache stays small
+  Object.assign(look, { stick: false, bag: false, height: 1.5 + Math.floor(r() * 5) * 0.02 });
+  if (r() < 0.7) { look.top = 0xa8956a; look.top2 = 0x8a7a54; }
+  return seatedFigure(look, new THREE.Vector3(0, 0.78, -0.1), [new THREE.Vector3(-0.3, 1.09, -0.47), new THREE.Vector3(0.3, 1.09, -0.47)]);
 }
 
 /** Original painted slogans for the back of goods carriers ("please honk" tradition). */

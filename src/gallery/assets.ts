@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { PlayerCar } from '../vehicle/cockpit';
 import { applyCosmetics } from '../vehicle/cosmeticsDisplay';
 import { vehicleModel, truckBack, autoSticker, type VehicleKind } from '../render/vehicleModels';
-import { lifeMat, makePerson, randomLook } from '../render/lifeModels';
+import { lifeMat } from '../render/lifeModels';
+import * as People from '../render/peopleModels';
 import { makeAnimal, ANIMAL_KEYS } from '../render/animalModels';
 import { vegGeometry } from '../render/vegModels';
 import { makeInstancedMat, matVC } from '../render/toon';
@@ -77,9 +78,26 @@ for (const kind of Object.keys(KIND_NAMES) as VehicleKind[]) {
 }
 
 // ---------------------------------------------------------------- people and animals
-for (let i = 0; i < 6; i++) {
-  add({ group: 'People', name: `Person ${i + 1}`, build: (seed) => makePerson(randomLook(mulberry32(seed * 7 + i))) });
+// People from the Quaternius packs: one entry per age and sex, then a crowd.
+for (const [name, age, sex] of [['Man', 'adult', 'm'], ['Woman', 'adult', 'f'], ['Teen boy', 'teen', 'm'], ['Teen girl', 'teen', 'f'], ['Boy', 'child', 'm'], ['Girl', 'child', 'f'], ['Old man', 'elder', 'm'], ['Old woman', 'elder', 'f']] as const) {
+  add({
+    group: 'People', name,
+    build: (seed) => People.makePerson(People.randomLook(mulberry32(seed * 31 + name.length), age, sex)),
+  });
 }
+add({
+  group: 'People', name: 'Crowd',
+  build: (seed) => {
+    const g = new THREE.Group();
+    const r = mulberry32(seed * 977);
+    for (let i = 0; i < 12; i++) {
+      const p = People.makePerson(People.randomLook(r));
+      p.position.set((i % 6) * 0.9 - 2.25, 0, Math.floor(i / 6) * 1.4);
+      g.add(p);
+    }
+    return g;
+  },
+});
 for (const key of ANIMAL_KEYS) add({ group: 'Animals', name: key, build: () => makeAnimal(key) });
 
 // ---------------------------------------------------------------- vegetation

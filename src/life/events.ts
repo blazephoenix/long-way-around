@@ -6,7 +6,7 @@ import { CHUNK, LANE } from '../world/world';
 import { chunkStops, townDensity } from '../world/sites';
 import { booms } from '../world/siteRender';
 import { hashInts, SYS, Rng } from '../world/prng';
-import { makePerson, randomLook } from '../render/lifeModels';
+import { makePerson, randomLook, wearHeadwear, bakePose, type Rig } from '../render/peopleModels';
 import { ModelBuilder } from '../render/models';
 import { toon } from '../render/toon';
 import { matGlow } from '../render/props';
@@ -23,7 +23,8 @@ function mergeGroup(root: THREE.Group): THREE.Group {
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
-    const g = m.geometry.clone();
+    // people are baked in their current pose
+    const g = (m as THREE.SkinnedMesh).isSkinnedMesh ? bakePose(m as THREE.SkinnedMesh) : m.geometry.clone();
     g.applyMatrix4(m.matrixWorld);
     for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') g.deleteAttribute(k);
     if (!g.attributes.color) {
@@ -152,9 +153,12 @@ export class Events {
     const r = Math.random;
     // a light-bearer row, the band, dancers, and the groom on a decorated horse
     for (let i = 0; i < 14; i++) {
-      const look = randomLook(r);
-      if (i < 4) { look.outfit = 'shirt'; look.top = 0xd8302a; look.head = 'cap'; }
+      const look = randomLook(r, r() < 0.15 ? 'teen' : 'adult');
+      if (i < 4) { look.top = 0xd8302a; look.top2 = 0xf2c230; wearHeadwear(look, 'cap', 0xd8302a); } // the band in uniform
       const p = makePerson(look);
+      const rig = p.userData.rig as Rig;
+      rig.play('Walk', 0);
+      rig.update(r() * 2); // caught mid-stride
       const row = Math.floor(i / 3), col = (i % 3) - 1;
       p.position.set(col * 1.0, 0, -row * 1.6);
       if (i < 4) {
@@ -181,10 +185,16 @@ export class Events {
     const hm = new THREE.Mesh(horse.build(), toon({ vertexColors: true }));
     hm.position.set(0, 0, -9);
     group.add(hm);
-    const groom = makePerson({ skin: 0x9e6c46, top: 0xf2e6c8, bottom: 0xf2e6c8, hair: 0x1a1412, outfit: 'kurta', head: 'turban', height: 1.0 });
-    groom.scale.setScalar(1);
-    groom.position.set(0, 1.0, -9);
-    for (const l of groom.userData.legs as THREE.Object3D[]) l.rotation.x = -0.9;
+    // the groom in cream with a saffron safa, seated on the horse
+    const gl = randomLook(r, 'adult', 'm');
+    Object.assign(gl, { head: 'casual', body: 'casual', legs: 'casual', feet: 'casual', top: 0xf2e6c8, top2: 0xd8c08a, bottom: 0xf2e6c8, bag: false, stick: false });
+    wearHeadwear(gl, 'turban', 0xe8742a);
+    const groom = makePerson(gl);
+    groom.position.set(0, 0.95, -9);
+    const grig = groom.userData.rig as Rig;
+    grig.pose = 'sit';
+    groom.updateMatrixWorld(true);
+    grig.update(0);
     group.add(groom);
     // strings of lights overhead
     const lights = new ModelBuilder();

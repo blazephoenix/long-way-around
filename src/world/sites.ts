@@ -445,11 +445,11 @@ function placeTown(world: World, out: Site[], c: number, biome: BiomeId, dens: n
       }
       s += w + rng.range(1, city ? 3 : 10);
     }
-    // street lights
+    // street lights; the model's arm reaches along local -z, so heading points it back over the road
     for (let s = s0 + 15; s < s0 + CHUNK; s += 40) {
       const r = world.road(s);
       const u = side * (ROAD_HALF + 2.2);
-      out.push({ id: `sl:${c}:${side}:${s}`, kind: 'streetlight', cat: 'deco', x: r.x + r.nx * u, z: r.z + r.nz * u, s, side, heading: Math.atan2(-r.nx * side, -r.nz * side), clear: 1.5, biome });
+      out.push({ id: `sl:${c}:${side}:${s}`, kind: 'streetlight', cat: 'deco', x: r.x + r.nx * u, z: r.z + r.nz * u, s, side, heading: Math.atan2(r.nx * side, r.nz * side), clear: 1.5, biome });
     }
   }
   // skyline towers behind the frontage in the city core

@@ -4,12 +4,15 @@ import * as THREE from 'three';
 import { World, CHUNK, ROAD_HALF, LANE } from '../world/world';
 import { chunkSites, townDensity, Site } from '../world/sites';
 import { hashInts, hashString, Rng, SYS, mulberry32 } from '../world/prng';
-import { makePerson, randomLook, animateWalk, PersonLook } from '../render/lifeModels';
+import { makePerson, randomLook, wearHeadwear, type PersonLook, type Rig } from '../render/peopleModels';
 import { HITCHERS, Hitcher } from '../../data/dialogue';
 import { BIOMES } from '../../data/biomes';
 import { FEATURES } from '../core/features';
 import { rareForSite } from './rare';
 import { disposeTree } from '../render/models';
+
+/** People further than this are hidden and not animated (metres). */
+const PEOPLE_DRAW = 160;
 
 interface Walker {
   id: string;
@@ -20,7 +23,6 @@ interface Walker {
   speed: number;
   s0: number;
   s1: number;
-  phase: number;
 }
 
 export interface Staff {
@@ -59,7 +61,6 @@ export class People {
   riding: HitchState | null = null;
   doneHitch = new Set<string>();
   passenger: THREE.Group | null = null;
-  private waveT = 0;
 
   constructor(private world: World, private scene: THREE.Scene) {}
 
@@ -70,12 +71,13 @@ export class People {
   }
 
   // -------------------------------------------------------------- spawning
-  private lookFor(id: string, role?: string): PersonLook {
+  private lookFor(id: string, role?: string, hitcher?: Hitcher): PersonLook {
     const r = mulberry32(hashInts(this.world.seed, SYS.life, hashString(id)));
-    const look = randomLook(r);
-    if (role === 'cook') look.outfit = 'apron';
-    if (role === 'attendant') { look.top = 0x2a5a8a; look.outfit = 'shirt'; look.head = 'cap'; }
-    if (!FEATURES.india && (look.outfit === 'saree' || look.outfit === 'salwar' || look.outfit === 'kurta')) look.outfit = r() < 0.5 ? 'shirt' : 'jacket';
+    // staff are adults (the chaiwala a man); hitchhikers follow their dialogue where it says
+    const look = role ? randomLook(r, 'adult', role === 'chaiwala' ? 'm' : undefined) : hitcher ? randomLook(r, hitcher.look?.age ?? 'adult', hitcher.look?.sex) : randomLook(r);
+    if (role === 'cook' || role === 'chaiwala') { look.top = 0xf2f0e8; look.top2 = 0xe0dccf; }
+    if (role === 'attendant') { look.top = 0x2a5a8a; look.top2 = 0x1e4468; wearHeadwear(look, 'cap', 0x2a5a8a); }
+    if (!FEATURES.india && (look.headwear === 'turban' || look.headwear === 'topi')) look.headwear = 'none';
     return look;
   }
 
@@ -92,16 +94,22 @@ export class People {
       const r = this.world.road(w.s);
       w.obj.position.set(r.x + r.nx * w.lat, this.world.ground(r.x + r.nx * w.lat, r.z + r.nz * w.lat), r.z + r.nz * w.lat);
       w.obj.rotation.y = Math.atan2(-r.tx, -r.tz) + (w.dir < 0 ? Math.PI : 0);
-      w.phase += dt * w.speed * 4.2;
-      animateWalk(w.obj, w.phase, 1);
+      // stride scales with height: the pack's walk covers about 0.75 body heights a second
+      this.animate(w.obj, dt, focus, 'Walk', w.speed / (0.75 * (w.obj.userData.look as PersonLook).height));
     }
-    // staff idle sway, hitchhiker waves when you approach
-    for (const s of this.staff.values()) s.obj.rotation.z = Math.sin(performance.now() * 0.001 + s.x) * 0.02;
-    if (this.waiting) {
-      this.waveT += dt;
-      const arm = this.waiting.obj.userData.arm as THREE.Object3D | undefined;
-      if (arm) arm.rotation.z = -2.4 + Math.sin(this.waveT * 5) * 0.3;
-    }
+    // staff idle (cooks and chaiwalas busy at the stove), the hitchhiker waves
+    for (const s of this.staff.values()) this.animate(s.obj, dt, focus, s.role === 'cook' || s.role === 'chaiwala' ? 'Interact' : 'Idle');
+    if (this.waiting) this.animate(this.waiting.obj, dt, focus, 'Wave');
+  }
+
+  /** Run a person's clip while they're near enough to see; hide them beyond that. */
+  private animate(obj: THREE.Object3D, dt: number, focus: THREE.Vector3, clip: string, rate = 1) {
+    const d = obj.position.distanceTo(focus);
+    obj.visible = d < PEOPLE_DRAW;
+    if (!obj.visible) return;
+    const rig = obj.userData.rig as Rig;
+    rig.play(clip, 0.3, rate);
+    rig.update(dt);
   }
 
   private refresh(focus: THREE.Vector3) {
@@ -122,10 +130,12 @@ export class People {
           wantW.add(id);
           if (this.walkers.has(id)) continue;
           const side = r.chance(0.5) ? 1 : -1;
-          const obj = makePerson(this.lookFor(id));
+          const look = this.lookFor(id);
+          const obj = makePerson(look);
           this.scene.add(obj);
           const s = s0 + r.range(0, CHUNK);
-          this.walkers.set(id, { id, obj, s, lat: side * (ROAD_HALF + r.range(2.2, 3.4)), dir: r.chance(0.5) ? 1 : -1, speed: r.range(0.9, 1.4), s0, s1: s0 + CHUNK, phase: r.range(0, 6) });
+          const speed = r.range(0.9, 1.4) * (look.age === 'elder' ? 0.7 : 1);
+          this.walkers.set(id, { id, obj, s, lat: side * (ROAD_HALF + r.range(2.2, 3.4)), dir: r.chance(0.5) ? 1 : -1, speed, s0, s1: s0 + CHUNK });
         }
       }
       // staff at stops
@@ -158,17 +168,7 @@ export class People {
           const r = w.road(s);
           const u = ROAD_HALF + 1.6;
           const x = r.x + r.nx * u, z = r.z + r.nz * u;
-          const look = this.lookFor(id);
-          look.bag = true;
-          const obj = makePerson(look);
-          // a raised arm for thumbing/waving
-          const arm = new THREE.Group();
-          arm.position.set(0.27, look.height * 0.78, 0);
-          const am = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.11).translate(0, -0.25, 0), new THREE.MeshToonMaterial({ color: look.top }));
-          arm.add(am);
-          arm.rotation.z = -2.4;
-          obj.add(arm);
-          obj.userData.arm = arm;
+          const obj = makePerson(this.lookFor(id, undefined, hitcher));
           obj.position.set(x, w.ground(x, z), z);
           obj.rotation.y = Math.atan2(r.tx, r.tz); // facing oncoming traffic (-z travel shows their face to +z drivers)
           this.scene.add(obj);
@@ -228,16 +228,20 @@ export class People {
       this.passenger = null;
     }
     if (!look) return;
-    const p = makePerson({ ...look, height: 1.6 });
+    const p = makePerson(look);
     p.scale.setScalar(0.95);
     p.position.set(-0.36, -0.75, 0.4);
-    for (const l of p.userData.legs as THREE.Object3D[]) l.rotation.x = -1.4;
     cockpit.add(p);
+    const rig = p.userData.rig as Rig;
+    rig.pose = 'sit';
+    rig.play('Idle', 0);
+    p.updateMatrixWorld(true);
+    rig.update(0);
     this.passenger = p;
   }
 
-  lookOf(id: string) {
-    return this.lookFor(id);
+  lookOf(id: string, hitcher?: Hitcher) {
+    return this.lookFor(id, undefined, hitcher);
   }
 
   static lane = LANE;

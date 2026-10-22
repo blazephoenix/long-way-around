@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The project lives at the repository root; run every command from there. It is a browser game ("Long Way Round"): a first-person, procedurally generated road trip through India-inspired biomes, built with Vite, TypeScript (strict) and Three.js. All geometry, textures, music and sound are generated in code; there are no asset files. `README.md` has controls and the original design notes. Source paths below such as `world/world.ts` are relative to `src/`.
+The project lives at the repository root; run every command from there. It is a browser game ("Long Way Round"): a first-person, procedurally generated road trip through India-inspired biomes, built with Vite, TypeScript (strict) and Three.js. All geometry, textures, music and sound are generated in code, with one exception: people come from the Quaternius CC0 character packs, packed into `src/assets/people-*.glb` by `scripts/people-assets.mjs` (see Rendering). `README.md` has controls and the original design notes. Source paths below such as `world/world.ts` are relative to `src/`.
 
 ## Commands
 
@@ -12,6 +12,7 @@ npx tsc --noEmit                              # typecheck (also the first half o
 npm test                                      # vitest: determinism, scoring, economy sim (~1 s)
 npx vitest run tests/determinism.test.ts -t "gas stations"   # one test
 npm run sim                                   # economy balance report only
+node scripts/people-assets.mjs                # rebuild src/assets/people-*.glb (downloads sources into .cache/)
 SINGLE=1 npx vite build && node scripts/artifact.mjs         # single-file build → artifact/long-way-round.html
 ```
 
@@ -43,7 +44,7 @@ Drive the game by running JavaScript in the page through the debug globals set i
 
 **Content placement vs. behaviour.** `world/sites.ts` decides *where* stops, landmarks and towns go (pure data). `world/siteRender.ts` and `stops/stopModels.ts` decide how they look, and `stops/stops.ts` defines interaction points. `game.ts:pointLabel` gives prompts, and `ui/panels.ts` opens the panels.
 
-**Rendering.** Toon materials share a per-biome gradient ramp (`render/toon.ts`); `render/post.ts` does the outline and film pass, with ink and fog colours blended between adjacent biomes in `Game.updateEnvironment`. Camera layer 1 is far vegetation, which the rear-view mirror skips. Every model is procedural (`render/*Models.ts`, `render/props.ts`). Performance budget: under about 190 draw calls in every biome; vegetation is one instanced draw per type. Baselines are in `perf-log.txt`.
+**Rendering.** Toon materials share a per-biome gradient ramp (`render/toon.ts`); `render/post.ts` does the outline and film pass, with ink and fog colours blended between adjacent biomes in `Game.updateEnvironment`. Camera layer 1 is far vegetation, which the rear-view mirror skips. Every model is procedural (`render/*Models.ts`, `render/props.ts`) except people: `render/peopleModels.ts` loads four skeleton families (men, women, boys, girls) once at boot (`loadPeople`, awaited in `App.boot` and the gallery), mixes a head, body, legs and feet per person, recolours them, fakes age by scale, head size and stoop, and merges each person into one skinned mesh driven by the pack's clips (`userData.rig`; call `rig.update(dt)`). To add a character, add its Poly Pizza id to `FAMILIES` in `scripts/people-assets.mjs` and rerun it. Performance budget: under about 190 draw calls in every biome; vegetation is one instanced draw per type. Baselines are in `perf-log.txt`.
 
 **Data and tuning** live in `data/`: biomes (palette, fog, gradient, adjacency, which the biome sequence must respect), photo subjects, cosmetics, dialogue, radio, and `data/economy.ts` (`ECON`, every economy constant). After touching `ECON`, prices or payouts (`camera/payout.ts`), run `npm run sim`: the target is a 1.3–1.6× income/spend ratio for the average profile (currently 1.51).
 

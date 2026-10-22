@@ -40,7 +40,7 @@ export class RoadLife {
           const h = HITCHERS.find((x) => x.id === l.riding.hitcher);
           if (h) {
             this.people.riding = { ...l.riding, hitcher: h };
-            this.people.seatPassenger(g.pcar.cockpit, this.people.lookOf(l.riding.id));
+            this.people.seatPassenger(g.pcar.cockpit, this.people.lookOf(l.riding.id, h));
           }
         }
       },
@@ -107,7 +107,7 @@ export class RoadLife {
         P.riding = { id: w.id, hitcher: w.hitcher, startOdo: g.car.odometer, rideM: km * 1000, said: 0, done: false, tipGiven: false };
         g.scene.remove(w.obj);
         P.waiting = null;
-        P.seatPassenger(g.pcar.cockpit, P.lookOf(w.id));
+        P.seatPassenger(g.pcar.cockpit, P.lookOf(w.id, w.hitcher));
         g.events.emit('subtitle', { who: w.hitcher.name, text: w.hitcher.lines[0] });
         g.events.emit('toast', { text: `${w.hitcher.name}, ${w.hitcher.who}` });
         this.chatTimer = 30;

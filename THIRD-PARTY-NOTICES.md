@@ -1,7 +1,7 @@
 # Third-party notices
 
-Long Way Round generates its assets in code. Where code is adapted from another project, the
-original license and copyright notice are reproduced here.
+Long Way Round generates its assets in code, except the people models below. Where code or assets
+come from another project, the original license and copyright notice are reproduced here.
 
 ## cortiz2894/stylized-components
 
@@ -33,3 +33,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Quaternius character packs
+
+Used in: `src/assets/people-*.glb` (built by `scripts/people-assets.mjs`): characters, parts and
+animation clips from Ultimate Modular Men, Ultimate Modular Women, Animated Men and Animated Women
+by Quaternius (https://quaternius.com), downloaded from the Poly Pizza mirror (https://poly.pizza).
+The files are trimmed, recoloured at runtime and recompressed.
+
+License: CC0 1.0 Universal (public domain dedication),
+https://creativecommons.org/publicdomain/zero/1.0/. No attribution is required; it is given here
+with thanks.
