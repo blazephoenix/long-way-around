@@ -7,7 +7,9 @@ import { vehicleModel, truckBack, autoSticker, type VehicleKind } from '../rende
 import { lifeMat, makePerson, randomLook } from '../render/lifeModels';
 import { makeAnimal, ANIMAL_KEYS } from '../render/animalModels';
 import { vegGeometry } from '../render/vegModels';
-import { makeInstancedMat, matVC, matWater } from '../render/toon';
+import { makeInstancedMat, matVC } from '../render/toon';
+import { waterMaterial, waterGeometry, type WaterKind } from '../render/water';
+import { discWater, gridWater, stripWater } from '../world/waterGeo';
 import { buildSite, matGlow, type PropOut } from '../render/props';
 import { ModelBuilder } from '../render/models';
 import { mulberry32 } from '../world/prng';
@@ -142,12 +144,57 @@ for (const [key, site] of [...siteExamples()].sort((a, b) => a[0].localeCompare(
 }
 
 // ---------------------------------------------------------------- water
+// Each water asset sits in a small patch of ground shaped like the real thing (a bowl, a channel, a
+// beach), so the depth bands and shoreline foam show as they do in the game.
+function groundPatch(size: number, segs: number, height: (x: number, z: number) => number, waterLevel: number) {
+  const g = new THREE.PlaneGeometry(size, size, segs, segs).rotateX(-Math.PI / 2);
+  const pos = g.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const sand = new THREE.Color(0xc9b98a), grass = new THREE.Color(0x6f9a50), mud = new THREE.Color(0x7a6a52), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i), y = height(x, z);
+    pos.setY(i, y);
+    const above = y - waterLevel;
+    c.copy(above < -0.3 ? mud : above < 0.7 ? sand : grass);
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, matVC);
+  m.receiveShadow = true;
+  return m;
+}
+function waterScene(kind: WaterKind, biome: BiomeId, size: number, height: (x: number, z: number) => number, water: () => ReturnType<typeof gridWater>) {
+  const g = new THREE.Group();
+  g.add(groundPatch(size, 72, height, 0));
+  const w = water();
+  const pal = BIOMES[biome].palette;
+  if (w) g.add(new THREE.Mesh(waterGeometry(w), waterMaterial(kind, pal.water, pal.waterDeep)));
+  // lift the scene clear of the gallery's ground plane and pads so the water never fights them
+  g.position.y = 1.0;
+  return g;
+}
 add({
-  group: 'Water', name: 'Lake surface',
+  group: 'Water', name: 'Lake (forest)',
   build: () => {
-    const m = new THREE.Mesh(new THREE.CircleGeometry(12, 40).rotateX(-Math.PI / 2), matWater);
-    m.position.y = 0.02;
-    return m;
+    const bowl = (x: number, z: number) => { const r = Math.hypot(x, z * 1.2); return r < 16 ? -4.5 * (1 - (r / 16) ** 2) + 0.8 : 0.8 + (r - 16) * 0.12; };
+    return waterScene('lake', 'forest', 44, bowl, () => discWater(0, 0, 18, 0, bowl, 10, 48));
+  },
+});
+add({
+  group: 'Water', name: 'River (tropical)',
+  build: () => {
+    const chan = (x: number, z: number) => { const u = Math.abs(z + Math.sin(x * 0.12) * 2) / 6; return u < 1 ? -2.4 * (1 - u * u) + 0.5 : 0.5 + (u - 1) * 2.2; };
+    const rows: number[][] = [];
+    for (let x = -20; x <= 20; x += 2) rows.push([x, -7.5, x, 7.5]);
+    return waterScene('river', 'tropical', 40, chan, () => stripWater(rows, 6, 0, chan));
+  },
+});
+add({
+  group: 'Water', name: 'Coast (sea)',
+  build: () => {
+    const beach = (x: number, z: number) => -6 + (z + 30) * 0.16 + Math.sin(x * 0.15) * 0.8;
+    return waterScene('sea', 'coast', 60, beach, () => gridWater(-30, -30, 60, 40, 0, (i, j) => beach(-30 + i * 1.5, -30 + j * 1.5)));
   },
 });
 

@@ -3,9 +3,10 @@
 import * as THREE from 'three';
 import { World, CHUNK } from './world';
 import { TILE, TileResult, TileRequest } from './tilegen';
-import { VEG_TYPES, VegType } from '../../data/biomes';
+import { VEG_TYPES, VegType, BIOMES } from '../../data/biomes';
 import { matVC, makeInstancedMat } from '../render/toon';
 import { vegGeometry } from '../render/vegModels';
+import { waterMaterial, waterGeometry } from '../render/water';
 import { buildRoadChunk, buildRoadChunkGen, ChunkMeshes, ExtraGen } from './chunkBuild';
 import GenWorker from './worker?worker&inline';
 import type { ModelBuilder } from '../render/models';
@@ -18,6 +19,7 @@ interface Tile {
   lod: number;
   veg: number;
   mesh: THREE.Mesh | null;
+  water: THREE.Mesh | null;
   res: TileResult | null;
   pending: boolean;
   wantLod: number;
@@ -85,7 +87,10 @@ export class Streamer {
 
   dispose() {
     this.worker.terminate();
-    for (const t of this.tiles.values()) if (t.mesh) { this.scene.remove(t.mesh); t.mesh.geometry.dispose(); }
+    for (const t of this.tiles.values()) {
+      if (t.mesh) { this.scene.remove(t.mesh); t.mesh.geometry.dispose(); }
+      if (t.water) { this.scene.remove(t.water); t.water.geometry.dispose(); }
+    }
     for (const c of this.chunks.values()) { this.onChunkDispose?.(c.group); this.disposeGroup(c.group); }
     for (const im of [...this.veg.values(), ...this.vegFar.values()]) { this.scene.remove(im); im.dispose(); (im.material as THREE.Material).dispose(); }
   }
@@ -116,12 +121,26 @@ export class Streamer {
       t.mesh.name = 'tile';
       this.scene.add(t.mesh);
     }
+    this.setWater(t, r);
     t.lod = r.lod;
     t.veg = r.veg;
     t.res = r;
     this.vegDirty = true;
     this.collDirty = true;
     this.readyTiles++;
+  }
+
+  private setWater(t: Tile, r: TileResult) {
+    if (t.water) {
+      this.scene.remove(t.water);
+      t.water.geometry.dispose();
+      t.water = null;
+    }
+    if (!r.water) return;
+    const pal = BIOMES.coast.palette;
+    t.water = new THREE.Mesh(waterGeometry(r.water), waterMaterial('sea', pal.water, pal.waterDeep));
+    t.water.name = 'sea';
+    this.scene.add(t.water);
   }
 
   private request(t: Tile) {
@@ -170,7 +189,7 @@ export class Streamer {
         const veg = d < 200 ? 2 : d < 460 ? 1 : 0;
         let t = this.tiles.get(key);
         if (!t) {
-          t = { key, ix, iz, lod: -1, veg: -1, mesh: null, res: null, pending: false, wantLod: lod, wantVeg: veg };
+          t = { key, ix, iz, lod: -1, veg: -1, mesh: null, water: null, res: null, pending: false, wantLod: lod, wantVeg: veg };
           this.tiles.set(key, t);
         }
         t.wantLod = lod;
@@ -180,6 +199,7 @@ export class Streamer {
     for (const [key, t] of this.tiles) {
       if (!want.has(key)) {
         if (t.mesh) { this.scene.remove(t.mesh); t.mesh.geometry.dispose(); }
+        if (t.water) { this.scene.remove(t.water); t.water.geometry.dispose(); }
         this.tiles.delete(key);
         this.vegDirty = true;
         this.collDirty = true;

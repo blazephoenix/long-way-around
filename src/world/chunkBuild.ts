@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { World, CHUNK, ROAD_HALF, BRANCH_HALF, Branch } from './world';
 import { BIOMES } from '../../data/biomes';
 import { Soup, ModelBuilder } from '../render/models';
-import { matRoad, matVC, matWater } from '../render/toon';
+import { matRoad, matVC } from '../render/toon';
+import { waterMaterial, waterGeometry } from '../render/water';
+import { discWater, stripWater } from './waterGeo';
 import { hexLin } from './tilegen';
 
 const C = (h: number) => new THREE.Color(h);
@@ -11,18 +13,6 @@ const C = (h: number) => new THREE.Color(h);
 export interface ChunkMeshes {
   group: THREE.Group;
   colliders: number[]; // x,z,r
-}
-
-const waterMats = new Map<number, THREE.MeshToonMaterial>();
-export function waterMat(color: number) {
-  let m = waterMats.get(color);
-  if (!m) {
-    m = matWater.clone();
-    m.onBeforeCompile = matWater.onBeforeCompile;
-    m.color.setHex(color);
-    waterMats.set(color, m);
-  }
-  return m;
 }
 
 export type ExtraGen = (world: World, c: number, props: ModelBuilder, colliders: number[], group: THREE.Group) => Generator<void, void>;
@@ -88,32 +78,25 @@ export function* buildRoadChunkGen(world: World, c: number, extra?: ExtraGen): G
   // lakes
   for (const L of F.lakes) {
     const B = world.biomeCfg(L.z);
-    const g = new THREE.CircleGeometry(L.r * 1.18, 28);
-    g.rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(g, waterMat(B.palette.water));
-    m.position.set(L.x, L.level, L.z);
-    m.receiveShadow = true;
-    group.add(m);
+    const r = L.r * 1.18;
+    const w = discWater(L.x, L.z, r, L.level, (x, z) => world.height(x, z), Math.max(6, Math.min(28, Math.round(r / 3.5))), 48);
+    if (w) group.add(new THREE.Mesh(waterGeometry(w), waterMaterial('lake', B.palette.water, B.palette.waterDeep)));
     yield;
   }
   // river + bridge
   if (F.river) {
     const R = F.river;
     const B = world.biomeCfg(R.s);
-    const rs = new Soup();
-    const wc = C(B.palette.water);
-    let last: number[][] | null = null;
-    for (let d = -520; d <= 520; d += 8) {
+    const rows: number[][] = [];
+    for (let d = -520; d <= 520; d += 6) {
       const zr = world.riverZ(R, d);
       const rr = world.road(zr);
       const x = rr.x + d / rr.cosA;
       const w = R.width + 1.5;
-      const cur = [[x, R.level, zr - w], [x, R.level, zr + w]];
-      if (last) rs.quad(last[0], last[1], cur[1], cur[0], wc);
-      last = cur;
+      rows.push([x, zr - w, x, zr + w]);
     }
-    const rm = new THREE.Mesh(rs.build(), waterMat(B.palette.water));
-    group.add(rm);
+    const rw = stripWater(rows, 6, R.level, (x, z) => world.height(x, z));
+    if (rw) group.add(new THREE.Mesh(waterGeometry(rw), waterMaterial('river', B.palette.water, B.palette.waterDeep)));
     yield;
     // a rope footbridge downstream in the tropics
     if (B.id === 'tropical') {

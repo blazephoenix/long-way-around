@@ -23,6 +23,7 @@ self.onmessage = (e: MessageEvent) => {
       colors: r.colors.slice(),
     };
     void transfer;
-    (self as unknown as Worker).postMessage({ type: 'tile', key: m.key, gen: m.gen, res: tight }, [tight.positions.buffer, tight.normals.buffer, tight.colors.buffer, r.index.buffer, r.colliders.buffer, ...r.vegData.map((d) => d.buffer)]);
+    const water = r.water ? [r.water.positions.buffer, r.water.depth.buffer, r.water.index.buffer] : [];
+    (self as unknown as Worker).postMessage({ type: 'tile', key: m.key, gen: m.gen, res: tight }, [tight.positions.buffer, tight.normals.buffer, tight.colors.buffer, r.index.buffer, r.colliders.buffer, ...r.vegData.map((d) => d.buffer), ...water]);
   }
 };

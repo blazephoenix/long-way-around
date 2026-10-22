@@ -6,9 +6,12 @@ import { hashInts, Rng, SYS } from './prng';
 import { smoothstep, lerp, clamp } from './noise';
 import { reservedAt } from './reserve';
 import { townDensity } from './sites';
+import { gridWater, WaterArrays } from './waterGeo';
 
 export const TILE = 256;
 export const LOD_SEGS = [64, 32, 16];
+/** ground this close above sea level still gets a water surface over it (the waves wash up) */
+const DRY_MARGIN = 0.6;
 
 export interface TileRequest {
   ix: number;
@@ -30,6 +33,8 @@ export interface TileResult {
   vegTypes: VegType[];
   vegData: Float32Array[]; // x,y,z,rot,scale,r,g,b per instance
   colliders: Float32Array; // x,z,r triples
+  /** sea surface over the parts of a coastal tile that lie below sea level */
+  water: WaterArrays | null;
 }
 
 // sRGB hex → linear rgb (matches three's colour management)
@@ -183,10 +188,18 @@ export function buildTile(world: World, req: TileRequest): TileResult {
   const index = new Uint32Array(idx);
 
   const veg = req.veg > 0 ? scatter(world, req) : { types: [] as VegType[], data: [] as Float32Array[], colliders: new Float32Array(0) };
+  // sea: only where the coast biome is in play and some ground dips below the water line
+  let water: WaterArrays | null = null;
+  const coastal = [z0, z0 + TILE / 2, z0 + TILE].some((z) => { const b = world.road(z).blend; return b.a === 'coast' || b.b === 'coast'; });
+  if (coastal) {
+    let low = Infinity;
+    for (let k = 1; k < positions.length && k < V * V * 3; k += 3) low = Math.min(low, positions[k]);
+    if (low < SEA_LEVEL + DRY_MARGIN) water = gridWater(x0, z0, TILE, segs, SEA_LEVEL, (i, j) => H[(j + 1) * G + (i + 1)]);
+  }
   return {
     ix: req.ix, iz: req.iz, lod: req.lod, veg: req.veg,
     positions: positions.subarray(0, sk * 3), normals: normals.subarray(0, sk * 3), colors: colors.subarray(0, sk * 3), index,
-    vegTypes: veg.types, vegData: veg.data, colliders: veg.colliders,
+    vegTypes: veg.types, vegData: veg.data, colliders: veg.colliders, water,
   };
 }
 

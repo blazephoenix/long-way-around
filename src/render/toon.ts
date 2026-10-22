@@ -90,23 +90,6 @@ export function makeInstancedMat(sway: number): THREE.MeshToonMaterial {
   return m;
 }
 
-export const matWater = toon({ color: 0x3f7f9a, transparent: false, emissive: 0x0a2a3a });
-matWater.onBeforeCompile = (sh) => {
-  sh.uniforms.uTime = shared.time;
-  sh.vertexShader = sh.vertexShader
-    .replace('#include <common>', '#include <common>\n varying vec3 vWp;')
-    .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWp = (modelMatrix * vec4(transformed,1.0)).xyz;');
-  sh.fragmentShader = sh.fragmentShader
-    .replace('#include <common>', '#include <common>\n varying vec3 vWp;\n uniform float uTime;')
-    .replace(
-      '#include <color_fragment>',
-      `#include <color_fragment>
-      // comic-style glints: thin bright dashes drifting on the surface
-      float w = sin(vWp.x * 0.35 + uTime * 0.9 + sin(vWp.z * 0.21) * 2.0) * sin(vWp.z * 0.42 - uTime * 0.7);
-      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.45 + 0.08, step(0.93, w));`,
-    );
-};
-
 /** Unlit glow (headlights, windows at night, neon). */
 export function glow(color: number): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({ color, fog: true });

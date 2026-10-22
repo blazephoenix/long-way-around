@@ -14,7 +14,7 @@ import { BIOMES, BiomeId } from '../data/biomes';
 import { ECON } from '../data/economy';
 import { siteExtra, spin, forgetChunk } from './world/siteRender';
 import { nightGlow } from './render/props';
-import { waterMat } from './world/chunkBuild';
+import { waterMaterial, updateWaterLight } from './render/water';
 import { Player, PlayerData, newPlayerData } from './economy/state';
 import { Walker } from './player/walker';
 import { Stops, Point, siteName } from './stops/stops';
@@ -170,9 +170,12 @@ export class Game {
     });
     this.stops.onEnter = (site, first) => this.enterStop(site, first);
 
+    // distant ocean: calm and well below the wave troughs (a near miss flickers at distance);
+    // coastal terrain tiles carry their own surf
     const seaGeo = new THREE.PlaneGeometry(6000, 6000, 1, 1);
     seaGeo.rotateX(-Math.PI / 2);
-    this.sea = new THREE.Mesh(seaGeo, waterMat(BIOMES.coast.palette.water));
+    seaGeo.setAttribute('aDepth', new THREE.Float32BufferAttribute(new Float32Array(4).fill(40), 1));
+    this.sea = new THREE.Mesh(seaGeo, waterMaterial('ocean', BIOMES.coast.palette.water, BIOMES.coast.palette.waterDeep));
     this.sea.visible = false;
     this.sea.receiveShadow = true;
     this.scene.add(this.sea);
@@ -533,9 +536,10 @@ export class Game {
     const coastal = bl.a === 'coast' || bl.b === 'coast';
     this.sea.visible = coastal;
     if (coastal) {
-      this.sea.position.set(Math.round(focus.x / 50) * 50, 0, Math.round(focus.z / 50) * 50);
+      this.sea.position.set(Math.round(focus.x / 50) * 50, -1.2, Math.round(focus.z / 50) * 50);
     }
     nightGlow.value = THREE.MathUtils.smoothstep(this.sky.night, 0.2, 0.8) * 0.9 + 0.1 * this.overcast;
+    updateWaterLight(this.sky.sun, this.sky.hemi.intensity, this.sky.horizon);
     // headlights
     this.headlightsOn = this.sky.night > 0.35 || this.fogBoost > 0.3 || this.overcast > 0.8;
     this.pcar.setHeadlights(this.headlightsOn, 30 + this.sky.night * 30);

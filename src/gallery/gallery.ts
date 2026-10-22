@@ -7,6 +7,7 @@ import { Sky } from '../render/sky';
 import { PostFX } from '../render/post';
 import { shared, toon } from '../render/toon';
 import { nightGlow } from '../render/props';
+import { updateWaterLight } from '../render/water';
 import { animateWalk } from '../render/lifeModels';
 import { disposeTree } from '../render/models';
 import { EYE } from '../vehicle/cockpit';
@@ -254,6 +255,7 @@ export function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
     if (walk && p.asset.group === 'People') for (const c of p.slot.children) if (c.userData.legs) animateWalk(c as THREE.Group, shared.time.value * 6, 1);
     sky.update(hour, controls.target, fog.color, { overcast: 0, aurora: 0, dim: 1 });
     nightGlow.value = THREE.MathUtils.smoothstep(sky.night, 0.2, 0.8) * 0.9;
+    updateWaterLight(sky.sun, sky.hemi.intensity, sky.horizon);
     const u = post.material.uniforms;
     (u.uInk.value as THREE.Color).copy(sky.ink);
     (u.uFog.value as THREE.Color).copy(fog.color);
