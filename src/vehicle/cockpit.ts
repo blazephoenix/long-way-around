@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { ModelBuilder } from '../render/models';
 import { toon, matVC } from '../render/toon';
+import { face, beam, profile, arch as archAt, Greenhouse, type P2, type P3 } from '../render/carKit';
 
 export const EYE = new THREE.Vector3(0.36, 0.74, 0.16);
 
@@ -42,55 +43,10 @@ const RW_TOP = 1.05, RW_BASE = 1.5; // rear window z at the roof and at the belt
 const HB = 0.86, HR = 0.74; // greenhouse half-width at the belt and at the roof (tumblehome)
 const B_PIL = 0.42; // B-pillar, just behind the front seat backs
 const WHEEL_Z = 1.3, WHEEL_Y = -0.22, ARCH_R = 0.41;
-/** point on the greenhouse side (side = ±1) at height fraction s (0 belt, 1 roof) */
-const gh = (side: number, s: number, z: number): P3 => [side * (HB + (HR - HB) * s), BELT + s * (ROOF - BELT), z];
-const wsZ = (s: number) => WS_BASE + (WS_TOP - WS_BASE) * s;
-const rwZ = (s: number) => RW_BASE + (RW_TOP - RW_BASE) * s;
-
-type P3 = [number, number, number];
-type P2 = [number, number];
-const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
-const UP = new THREE.Vector3(0, 1, 0);
-
-/** flat convex polygon whose front face points towards `toward` */
-function face(m: ModelBuilder, pts: P3[], color: number, toward: P3) {
-  const [a, b, c] = pts;
-  const n = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).cross(new THREE.Vector3(c[0] - a[0], c[1] - a[1], c[2] - a[2]));
-  const o = pts.reduce((s, p) => [s[0] + p[0] / pts.length, s[1] + p[1] / pts.length, s[2] + p[2] / pts.length], [0, 0, 0]);
-  const ordered = n.dot(_v.set(toward[0] - o[0], toward[1] - o[1], toward[2] - o[2])) < 0 ? [...pts].reverse() : pts;
-  const pos: number[] = [];
-  for (let i = 1; i + 1 < ordered.length; i++) pos.push(...ordered[0], ...ordered[i], ...ordered[i + 1]);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  m.add(g, color);
-}
-
-/** box running from a to b along its local y; w and d are its cross-section */
-function beam(m: ModelBuilder, a: P3, b: P3, w: number, d: number, color: number) {
-  _v.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-  const len = _v.length();
-  _e.setFromQuaternion(_q.setFromUnitVectors(UP, _v.normalize()));
-  m.box(w, len, d, color, { p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], r: [_e.x, _e.y, _e.z] });
-}
-
-/** side profile given as (z, y) points, extruded across x and centred on cx */
-function profile(m: ModelBuilder, pts: P2[], width: number, color: number, cx = 0, bevel = 0) {
-  const sh = new THREE.Shape(pts.map(([z, y]) => new THREE.Vector2(z, y)));
-  const depth = width - 2 * bevel;
-  const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 8 });
-  m.add(geo, color, { p: [cx + depth / 2, 0, 0], r: [0, -Math.PI / 2, 0] });
-}
-
-/** wheel-arch cut-out along the sill, front to back, over a wheel at zc */
-function arch(zc: number, sill: number): P2[] {
-  const a0 = Math.asin((sill - WHEEL_Y) / ARCH_R);
-  const pts: P2[] = [];
-  for (let k = 0; k <= 10; k++) {
-    const a = Math.PI - a0 + (2 * a0 - Math.PI) * (k / 10);
-    pts.push([zc + Math.cos(a) * ARCH_R, WHEEL_Y + Math.sin(a) * ARCH_R]);
-  }
-  return pts;
-}
+const GH = new Greenhouse({ belt: BELT, roof: ROOF, wsBase: WS_BASE, wsTop: WS_TOP, rwTop: RW_TOP, rwBase: RW_BASE, hb: HB, hr: HR });
+const gh = (side: number, s: number, z: number) => GH.side(side, s, z);
+const rwZ = (s: number) => GH.rwZ(s);
+const arch = (zc: number, sill: number) => archAt(zc, sill, WHEEL_Y, ARCH_R);
 
 // hood and boot lines, nose to windshield and rear window to tail
 const HOOD: P2[] = [[WS_BASE, BELT], [-1.7, 0.425], [-2.0, 0.37], [-2.1, 0.25]];
@@ -164,31 +120,15 @@ export class PlayerCar {
     this.exterior.add(body);
     // greenhouse (second paint colour): a frustum from the belt line to the roof
     const roof = new ModelBuilder();
-    const ghC: P3 = [0, 0.7, 0.3];
-    const out = (pts: P3[]): P3 => {
-      const o = pts.reduce((s, p) => [s[0] + p[0], s[1] + p[1], s[2] + p[2]], [0, 0, 0]).map((v) => v / pts.length);
-      return [o[0] * 2 - ghC[0], o[1] * 2 - ghC[1], o[2] * 2 - ghC[2]];
-    };
-    const ghFace = (pts: P3[], m = roof, color = 0xffffff) => face(m, pts, color, out(pts));
-    for (const sd of [-1, 1]) ghFace([gh(sd, 0, WS_BASE), gh(sd, 1, WS_TOP), gh(sd, 1, RW_TOP), gh(sd, 0, RW_BASE)]);
-    ghFace([gh(-1, 0, WS_BASE), gh(1, 0, WS_BASE), gh(1, 1, WS_TOP), gh(-1, 1, WS_TOP)]);
-    ghFace([gh(-1, 0, RW_BASE), gh(1, 0, RW_BASE), gh(1, 1, RW_TOP), gh(-1, 1, RW_TOP)]);
-    ghFace([gh(-1, 1, WS_TOP), gh(1, 1, WS_TOP), gh(1, 1, RW_TOP), gh(-1, 1, RW_TOP)]);
+    GH.shell(roof, 0xffffff);
     const roofM = new THREE.Mesh(roof.build(), this.paint2Mat);
     roofM.castShadow = true;
     this.exterior.add(roofM);
     const trim = new ModelBuilder();
     // glass, set just proud of the greenhouse so the pillars and roof rails keep the roof colour
-    const lift = (p: P3, n: P3): P3 => [p[0] + n[0] * 0.006, p[1] + n[1] * 0.006, p[2] + n[2] * 0.006];
-    const ws = (u: number, s: number): P3 => lift([u * (HB + (HR - HB) * s), BELT + s * (ROOF - BELT), wsZ(s)], [0, 0.66, -0.75]);
-    const rw = (u: number, s: number): P3 => lift([u * (HB + (HR - HB) * s), BELT + s * (ROOF - BELT), rwZ(s)], [0, 0.6, 0.8]);
-    ghFace([ws(-0.9, 0.06), ws(0.9, 0.06), ws(0.88, 0.93), ws(-0.88, 0.93)], trim, C.glass);
-    ghFace([rw(-0.86, 0.08), rw(0.86, 0.08), rw(0.84, 0.9), rw(-0.84, 0.9)], trim, C.glass);
+    GH.frontRearGlass(trim, C.glass);
+    GH.sideGlass(trim, C.glass, [B_PIL]);
     for (const sd of [-1, 1]) {
-      const sg = (s: number, z: number) => lift(gh(sd, s, z), [sd, 0.15, 0]);
-      const [s0, s1] = [0.07, 0.87];
-      ghFace([sg(s0, wsZ(s0) + 0.1), sg(s1, wsZ(s1) + 0.08), sg(s1, B_PIL - 0.05), sg(s0, B_PIL - 0.05)], trim, C.glass);
-      ghFace([sg(s0, B_PIL + 0.07), sg(s1, B_PIL + 0.07), sg(s1, rwZ(s1) - 0.18), sg(s0, rwZ(s0) - 0.24)], trim, C.glass);
       const x = sd * 0.9;
       // chrome belt strip, door shut lines and handles
       trim.box(0.012, 0.025, RW_BASE - WS_BASE, C.chrome, { p: [x, BELT - 0.01, (RW_BASE + WS_BASE) / 2] });
@@ -237,7 +177,7 @@ export class PlayerCar {
     }
     this.bumperSlot.position.set(0, -0.32, -2.25);
     this.exterior.add(this.bumperSlot);
-    const st = rw(0, 0.45);
+    const st = GH.rw(0, 0.45);
     this.rearSticker.position.set(st[0], st[1], st[2]);
     this.rearSticker.rotation.x = -0.64;
     this.exterior.add(this.rearSticker);

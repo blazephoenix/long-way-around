@@ -2,7 +2,8 @@
 // keeping distance, easing past slow obstacles, waiting for animals, overtaking a stopped player.
 import * as THREE from 'three';
 import { World, LANE, ROAD_HALF } from '../world/world';
-import { vehicleModel, VehicleKind, lifeMat, truckBack, autoSticker } from '../render/lifeModels';
+import { lifeMat } from '../render/lifeModels';
+import { vehicleModel, VehicleKind, truckBack, autoSticker } from '../render/vehicleModels';
 import { matGlow } from '../render/props';
 import { BIOMES } from '../../data/biomes';
 import { FEATURES } from '../core/features';
