@@ -257,7 +257,7 @@ export async function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
     if (p.asset.group === 'People' || p.asset.group === 'Animals') p.slot.traverse((c) => {
       const rig = c.userData.rig as Rig | undefined;
       const gait = c.userData.gait as string | undefined;
-      if (rig && gait !== 'still') { rig.play(gait === 'whale' ? 'Swim' : walk && gait !== 'sitter' ? 'Walk' : 'Idle'); rig.update(dt); }
+      if (rig && gait !== 'still') { rig.play(gait === 'whale' ? 'Swim' : gait === 'flyer' ? 'Fly' : gait === 'hover' ? 'Hover' : walk && gait !== 'sitter' ? 'Walk' : 'Idle'); rig.update(dt); }
     });
     sky.update(hour, controls.target, fog.color, { overcast: 0, milkyWay: 0, dim: 1 });
     nightGlow.value = THREE.MathUtils.smoothstep(sky.night, 0.2, 0.8) * 0.9;

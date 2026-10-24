@@ -5,13 +5,14 @@
 //   the skinned mesh (recoloured at runtime by material) and the few clips the game plays.
 // - STATICS: unrigged low-poly animals (Poly by Google, CC-BY 3.0; Quaternius 2019 OBJ, CC0). Each is
 //   baked to one mesh with a flat colour per face (sampled from its texture), turned to face +z with
-//   its feet on y = 0; the game rigs and animates them at load (render/animalRig.ts).
+//   its feet on y = 0; the game rigs and animates them at load (render/animalRig.ts). The birds are
+//   statics too: wing, neck and tail bones are made for them at load.
 import fs from 'node:fs';
 import path from 'node:path';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dedup, meshopt, prune, weld } from '@gltf-transform/functions';
-import { MeshoptEncoder } from 'meshoptimizer';
+import { MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import { PNG } from 'pngjs';
 import jpeg from 'jpeg-js';
 
@@ -28,17 +29,28 @@ const ANIMALS = {
   whale: '7300e697-2543-4a9a-a77d-dedf29251fd7',
   dog: 'ba6d0ee3-bcc0-4ef0-9d3c-a3e245b41c77',
 };
-// species: uuid on static.poly.pizza, or a zip + OBJ path; yaw (radians) turns the model to face +z
+// species: uuid on static.poly.pizza; yaw (radians) turns the model to face +z, pitch tips its head
+// down (a bird posed upright, levelled for flight); tris simplifies a dense model to about that many
+// triangles
 const STATICS = {
   tiger: { id: '460ff96a-ea48-4b39-b38c-d0c7daa06a3c', yaw: 0 },
   elephant: { id: '2bc73032-37c9-4276-a620-437df45db428', yaw: 0 },
-  monkey: { id: '69e0460d-0909-4f00-9b81-9499c6345d1c', yaw: 0 },
+  macaque: { id: '479fa09a-9e91-4335-8ffc-b86f68377a86', yaw: 0 },
   camel: { id: '3f877d62-5891-4de2-8324-ff602bdb1b1a', yaw: 0 },
   sambar: { id: '0dac29e1-fae0-4cad-b117-03b6c0dbbd37', yaw: 0 },
   jackal: { id: 'a75b3f4b-80d4-4361-b53e-135c09827f43', yaw: 0 },
   turtle: { id: '7c64cc2c-b9aa-4edd-bc32-9e95d66ca5e0', yaw: 0 },
   blackbuck: { id: 'a69377b7-683a-4441-a831-92f10fd620e1', yaw: 0 },
   cat: { id: '5d32eb38-9546-4ce4-aa77-bcef9328ee61', yaw: 0 },
+  // birds
+  crow: { id: '7c2cc3e6-3882-49ab-bba6-33ddfc3594d9', yaw: 0 },
+  dove: { id: '7ef274a4-4d73-4eee-96e4-209ba68a3146', yaw: 0 },
+  owl: { id: '9e08c33a-7dad-4173-b03a-0de2adf138a2', yaw: 0 },
+  heron: { id: 'ca5572e1-c229-4ad0-a00b-797c4c6e713e', yaw: 0 },
+  gull: { id: '882c4ff3-c97b-4ae2-aedf-953c8d692898', yaw: -Math.PI / 2 },
+  parrot: { id: 'afd26582-a893-4b63-9dcd-7e5ef82cd159', yaw: 0 },
+  kingfisher: { id: '03d39342-5dca-45e3-a0e0-db405e5be4e9', yaw: -Math.PI / 2 },
+  hawk: { id: '2a7aca61-a8f6-45f6-950e-003d4bfcab45', yaw: Math.PI, pitch: 0.95, tris: 2400 },
 };
 // the clips the game plays (walking, fleeing, standing, grazing, swimming)
 const CLIPS = /^(Walk|Gallop|Idle|Eating|Swim)$/;
@@ -64,6 +76,7 @@ function dropAnimation(a) {
 }
 
 await MeshoptEncoder.ready;
+await MeshoptSimplifier.ready;
 fs.mkdirSync(OUT, { recursive: true });
 for (const [name, id] of Object.entries(ANIMALS)) {
   const doc = await source(name, id);
@@ -103,6 +116,21 @@ function decodeImage(img) {
 /** srgb byte -> linear float, like three's Color.setHex (vertex colours are linear) */
 const lin = (c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
 
+/** weld by position (UV seams included) and let meshoptimizer collapse edges down to about `tris` */
+function simplify(P, idx, tris) {
+  const key = new Map(), remap = new Uint32Array(P.getCount()), v = [0, 0, 0];
+  for (let i = 0; i < P.getCount(); i++) {
+    P.getElement(i, v);
+    const k = v.map((x) => x.toFixed(5)).join(',');
+    if (!key.has(k)) key.set(k, i);
+    remap[i] = key.get(k);
+  }
+  const pos = new Float32Array(P.getCount() * 3);
+  for (let i = 0; i < P.getCount(); i++) { P.getElement(i, v); pos.set(v, i * 3); }
+  const [out] = MeshoptSimplifier.simplify(idx.map((i) => remap[i]), pos, 3, tris * 3, 0.05);
+  return out;
+}
+
 for (const [name, spec] of Object.entries(STATICS)) {
   const src = await source(name, spec.id);
   const pos = [], col = [];
@@ -114,12 +142,14 @@ for (const [name, spec] of Object.entries(STATICS)) {
       const P = prim.getAttribute('POSITION'), UV = prim.getAttribute('TEXCOORD_0'), I = prim.getIndices();
       const mat = prim.getMaterial(), f = mat?.getBaseColorFactor() ?? [1, 1, 1, 1];
       const tex = mat?.getBaseColorTexture() ? decodeImage(mat.getBaseColorTexture()) : null;
-      const n = I ? I.getCount() : P.getCount();
+      let idx = I ? Uint32Array.from(I.getArray()) : Uint32Array.from({ length: P.getCount() }, (_, i) => i);
+      if (spec.tris) idx = simplify(P, idx, spec.tris);
+      const n = idx.length;
       const v = [0, 0, 0], uv = [0, 0];
       for (let t = 0; t < n; t += 3) {
         // one colour per face: the texel under the face's UV centre (textures here are palettes or paint)
         let cu = 0, cv = 0;
-        const ids = [0, 1, 2].map((k) => (I ? I.getScalar(t + k) : t + k));
+        const ids = [idx[t], idx[t + 1], idx[t + 2]];
         for (const i of ids) {
           P.getElement(i, v);
           const x = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12], y = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13], z = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14];
@@ -139,7 +169,13 @@ for (const [name, spec] of Object.entries(STATICS)) {
   }
   // face +z, centre on x/z, feet on y = 0
   const c = Math.cos(spec.yaw), s = Math.sin(spec.yaw);
-  for (let i = 0; i < pos.length; i += 3) { const x = pos[i], z = pos[i + 2]; pos[i] = x * c + z * s; pos[i + 2] = -x * s + z * c; }
+  const cp = Math.cos(spec.pitch ?? 0), sp = Math.sin(spec.pitch ?? 0);
+  for (let i = 0; i < pos.length; i += 3) {
+    const x = pos[i], z = pos[i + 2];
+    pos[i] = x * c + z * s; pos[i + 2] = -x * s + z * c;
+    const y = pos[i + 1], z1 = pos[i + 2];
+    pos[i + 1] = y * cp - z1 * sp; pos[i + 2] = y * sp + z1 * cp;
+  }
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], pos[i + k]); hi[k] = Math.max(hi[k], pos[i + k]); }
   for (let i = 0; i < pos.length; i += 3) { pos[i] -= (lo[0] + hi[0]) / 2; pos[i + 1] -= lo[1]; pos[i + 2] -= (lo[2] + hi[2]) / 2; }

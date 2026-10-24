@@ -222,7 +222,9 @@ export class Animals {
     if (!rig || !a.obj.visible) return;
     const gait = a.obj.userData.gait as string;
     if (gait === 'still') return; // posed once (lying down)
-    if (a.state === 'flee') { rig.extra = []; rig.play('Gallop', 0.2); }
+    if (gait === 'flyer') rig.play('Fly');
+    else if (gait === 'hover') rig.play('Hover');
+    else if (a.state === 'flee') { rig.extra = []; rig.play('Gallop', 0.2); }
     else if (a.state === 'walk') rig.play('Walk', 0.3);
     else if (gait === 'whale') rig.play('Swim');
     // grazers spend about half their standing time with their heads down
@@ -248,6 +250,14 @@ export class Animals {
       for (const l of limbs) l.rotation.z = flap * (l.userData.side as number);
       return;
     }
+    if (gait === 'hover') {
+      // a kingfisher hangs over the water, drifting from one spot to the next
+      const t = a.phase;
+      const level = w.waterAt(a.home.x, a.home.z) ?? w.ground(a.home.x, a.home.z);
+      o.position.set(a.home.x + Math.sin(t * 0.23) * 2.5, level + 2.2 + Math.sin(t * 1.3) * 0.12, a.home.z + Math.cos(t * 0.17) * 2.5);
+      o.rotation.y = Math.sin(t * 0.11) * 1.6;
+      return;
+    }
     if (gait === 'flutter') {
       const t = a.phase;
       o.position.set(a.home.x + Math.sin(t * 0.7) * 3 + Math.sin(t * 2.3) * 0.5, w.ground(a.home.x, a.home.z) + 0.6 + Math.sin(t * 1.7) * 0.3, a.home.z + Math.cos(t * 0.5) * 3);
@@ -269,7 +279,7 @@ export class Animals {
       o.scale.y = 1 + Math.sin(a.phase * 1.8) * 0.015;
       if (gait === 'sitter') o.rotation.y = a.heading + Math.sin(a.phase * 0.3) * 0.6;
       o.position.y = w.ground(o.position.x, o.position.z) + (a.def.spawn?.place === 'parapet' ? 0.6 : 0);
-      if (this.scared(a) && gait === 'sitter') this.flee(a);
+      if (this.scared(a) && gait === 'sitter' && o.userData.flees !== false) this.flee(a);
       if (a.state !== 'flee') return;
     }
     // walkers (quads and ground birds)
@@ -294,6 +304,8 @@ export class Animals {
       const d = Math.hypot(dx, dz);
       const speed = (o.userData.speed as number) * (a.state === 'flee' ? 3.2 : 1);
       if (d < 0.4 || a.timer <= 0) {
+        // a bird that can't fly settles where it ran to; the rest are gone
+        if (a.state === 'flee' && gait === 'bird' && !o.userData.flies) { a.state = 'idle'; a.timer = a.rng.range(3, 9); a.home.set(o.position.x, 0, o.position.z); return; }
         if (a.state === 'flee') { a.state = 'gone'; o.visible = false; return; }
         a.state = 'idle';
         a.timer = a.rng.range(3, 9);
@@ -311,7 +323,7 @@ export class Animals {
         a.vel = speed;
       }
     } else a.vel = 0;
-    o.position.y = w.ground(o.position.x, o.position.z);
+    o.position.y = w.ground(o.position.x, o.position.z) + (a.def.spawn?.place === 'parapet' && a.state !== 'flee' ? 0.6 : 0);
     // limb swing
     const moving = a.state === 'walk' || a.state === 'flee';
     const k = moving ? (a.state === 'flee' ? 14 : 7) : 0;
@@ -323,7 +335,7 @@ export class Animals {
         l.rotation.z = a.state === 'flee' ? Math.sin(a.phase * 18) * 0.7 * (l.userData.side as number) : -0.2 * (l.userData.side as number);
       }
     }
-    if (a.state === 'flee' && gait === 'bird') o.position.y += Math.min(12, (12 - a.timer) * 2.5);
+    if (a.state === 'flee' && o.userData.flies) o.position.y += Math.min(12, (12 - a.timer) * 2.5);
   }
 
   private flee(a: Active) {

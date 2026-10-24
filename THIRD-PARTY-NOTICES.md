@@ -56,20 +56,39 @@ License: CC0 1.0 Universal, https://creativecommons.org/publicdomain/zero/1.0/.
 
 ## Poly by Google animals
 
-Used in: `src/assets/animals/{tiger,elephant,monkey,camel,sambar,jackal,turtle,blackbuck,cat}.glb`
+Used in: `src/assets/animals/{tiger,elephant,macaque,camel,sambar,jackal,turtle,blackbuck,cat}.glb`
 (built by `scripts/animal-assets.mjs`), from the Poly by Google archive on Poly Pizza
-(https://poly.pizza). Baked to flat per-face colours, recoloured (jackal, turtle, blackbuck), the
+(https://poly.pizza). Baked to flat per-face colours, recoloured (macaque, jackal, turtle, blackbuck), the
 sambar's antlers reduced, and rigged and animated at runtime.
 
 - Tiger, by Poly by Google (https://poly.pizza/m/5A3w06FXUup)
 - Elephant, by Poly by Google (https://poly.pizza/m/cx0-TiCjDOx)
-- Monkey, by Poly by Google (https://poly.pizza/m/0yRz2AkLuuo)
+- Baboon (used as the rhesus macaque), by Poly by Google (https://poly.pizza/m/aeLFKp6X19x)
 - Camel, by Poly by Google (https://poly.pizza/m/7XeLogrxLad)
 - Elk (used as the sambar), by Poly by Google (https://poly.pizza/m/bO8XPdrAb5G)
 - Coyote (used as the golden jackal), by Poly by Google (https://poly.pizza/m/auVAs_kT6nE)
 - Turtle (used as the olive ridley), by Poly by Google (https://poly.pizza/m/fklSEvGm1Q8)
 - Gazelle (used as the blackbuck), by Poly by Google (https://poly.pizza/m/bPYIQ_XQbrj)
 - Cat, by Poly by Google (https://poly.pizza/m/6dM1J6f6pm9)
+
+License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/.
+
+## Birds
+
+Used in: `src/assets/animals/{crow,dove,owl,heron,gull,parrot,kingfisher,hawk}.glb` (built by
+`scripts/animal-assets.mjs`), from Poly Pizza (https://poly.pizza). Baked to flat per-face colours,
+turned to face forward, recoloured to Indian species (house crow, rock pigeon, grey heron,
+brown-headed gull, rose-ringed parakeet, white-throated kingfisher), the parakeet's tail lengthened,
+the hawk simplified and levelled, and rigged and animated at runtime. The peacock is built in code.
+
+- Raven (used as the house crow), by Poly by Google (https://poly.pizza/m/bnpgn6o5qNs)
+- Dove (used as the rock pigeon), by Poly by Google (https://poly.pizza/m/2jmH3trzPFf)
+- Long eared owl, by Poly by Google (https://poly.pizza/m/dVPHzmMmXlg)
+- Heron (used as the grey heron), by Poly by Google (https://poly.pizza/m/74guNhJR5Ij)
+- Flying gull, by Poly by Google (https://poly.pizza/m/eMNhHDZakYp)
+- Bird (used as the rose-ringed parakeet), by madtrollstudio (https://poly.pizza/m/h5IzAUdltz)
+- Parrot (used as the white-throated kingfisher), by Poly by Google (https://poly.pizza/m/dpl7B31PqWX)
+- Hawk Lp Rigged (used as the kestrel), by Sherkiz (https://poly.pizza/m/RkN6MEbP6g)
 
 License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/.
 

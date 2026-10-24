@@ -2,23 +2,36 @@
 // to flat-coloured meshes by scripts/animal-assets.mjs. At load each mesh is bound to a skeleton made
 // for it — a body, hip and knee per leg, a neck and a tail, placed from the model's own shape — with
 // weights that blend across each joint, and a procedural rig drives walk, gallop, graze and idle.
-// One skinned mesh (one draw call) per animal.
+// Birds get wing bones (shoulder and wrist) instead of legs, and fly, hover, hop and peck. The peacock
+// is hand-built (peacock.ts) and rigged the same way. One skinned mesh (one draw call) per animal.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { personMat } from './peopleModels';
 import tigerUrl from '../assets/animals/tiger.glb?url';
 import elephantUrl from '../assets/animals/elephant.glb?url';
-import monkeyUrl from '../assets/animals/monkey.glb?url';
+import macaqueUrl from '../assets/animals/macaque.glb?url';
 import camelUrl from '../assets/animals/camel.glb?url';
 import sambarUrl from '../assets/animals/sambar.glb?url';
 import jackalUrl from '../assets/animals/jackal.glb?url';
 import turtleUrl from '../assets/animals/turtle.glb?url';
 import blackbuckUrl from '../assets/animals/blackbuck.glb?url';
 import catUrl from '../assets/animals/cat.glb?url';
+import crowUrl from '../assets/animals/crow.glb?url';
+import doveUrl from '../assets/animals/dove.glb?url';
+import owlUrl from '../assets/animals/owl.glb?url';
+import heronUrl from '../assets/animals/heron.glb?url';
+import gullUrl from '../assets/animals/gull.glb?url';
+import parrotUrl from '../assets/animals/parrot.glb?url';
+import kingfisherUrl from '../assets/animals/kingfisher.glb?url';
+import hawkUrl from '../assets/animals/hawk.glb?url';
+import { buildPeacock } from './peacock';
 
-type StaticKey = 'tiger' | 'elephant' | 'monkey' | 'camel' | 'sambar' | 'jackal' | 'turtle' | 'blackbuck' | 'cat';
-const URLS: Record<StaticKey, string> = { tiger: tigerUrl, elephant: elephantUrl, monkey: monkeyUrl, camel: camelUrl, sambar: sambarUrl, jackal: jackalUrl, turtle: turtleUrl, blackbuck: blackbuckUrl, cat: catUrl };
+const URLS = {
+  tiger: tigerUrl, elephant: elephantUrl, macaque: macaqueUrl, camel: camelUrl, sambar: sambarUrl, jackal: jackalUrl, turtle: turtleUrl, blackbuck: blackbuckUrl, cat: catUrl,
+  crow: crowUrl, dove: doveUrl, owl: owlUrl, heron: heronUrl, gull: gullUrl, parrot: parrotUrl, kingfisher: kingfisherUrl, hawk: hawkUrl,
+};
+type StaticKey = keyof typeof URLS | 'peacock';
 
 interface Mesh {
   /** non-indexed flat faces in file units, facing +z, feet on y = 0 */
@@ -26,6 +39,8 @@ interface Mesh {
   /** linear colour per vertex */
   col: Float32Array;
   box: THREE.Box3;
+  /** per vertex, 1 to bind to the tail bone whatever the shape says (the peacock's train) */
+  tag?: Uint8Array;
 }
 const meshes = new Map<StaticKey, Mesh>();
 let loading: Promise<void> | null = null;
@@ -33,7 +48,9 @@ let loading: Promise<void> | null = null;
 export function loadStaticAnimals(fetchBytes: (url: string) => Promise<ArrayBuffer> = (u) => fetch(u).then((r) => r.arrayBuffer())): Promise<void> {
   if (!loading) {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    loading = Promise.all((Object.keys(URLS) as StaticKey[]).map(async (k) => {
+    const pea = buildPeacock();
+    meshes.set('peacock', { ...pea, box: new THREE.Box3().setFromArray(pea.pos) });
+    loading = Promise.all((Object.keys(URLS) as (keyof typeof URLS)[]).map(async (k) => {
       const gltf = await loader.parseAsync(await fetchBytes(URLS[k]), '');
       // the compressed file keeps positions in a unit box and puts the real scale on the node
       gltf.scene.updateMatrixWorld(true);
@@ -51,19 +68,36 @@ export function loadStaticAnimals(fetchBytes: (url: string) => Promise<ArrayBuff
 }
 
 // ------------------------------------------------------------------ species
-type Gait = 'quad' | 'sitter' | 'crawl';
+type Gait = 'quad' | 'crawl' | 'bird' | 'flyer' | 'hover' | 'perch';
+const BIRD_GAITS: Gait[] = ['bird', 'flyer', 'hover', 'perch'];
 
 interface Spec {
   src: StaticKey;
-  /** standing height (or, for the turtle, length) in metres */
+  /** standing height in metres, or the length nose to tail (turtle, birds in flight); native: the
+   * model is built in metres */
   height?: number;
   length?: number;
+  native?: boolean;
   /** -1 when the model's head points to -z */
   forward?: 1 | -1;
   /** where the legs meet the body, as a fraction of height */
   legTop: number;
+  /** two legs (birds), told apart by side only */
+  biped?: boolean;
+  /** stands its ground (a macaque on a wall) until scared, then runs */
+  stays?: boolean;
   /** the neck's root along the body (-0.5 tail end .. 0.5 head end) and its height fraction */
   neck?: [number, number];
+  /** upright birds (owl): the head is everything above the neck's height, not in front of it */
+  neckUp?: boolean;
+  /** birds: wings are the parts beyond this fraction of the half-width, the wrist beyond `tip`;
+   * hz is the wingbeat; hop scales the bob of a walk (a hop for crows, a stride for a heron) */
+  wings?: { from: number; tip?: number; hz: number; rest?: number };
+  hop?: number;
+  /** the train shivers now and then (peacock) */
+  shiver?: boolean;
+  /** stretch everything behind this length fraction backwards by k (a parakeet's long tail) */
+  stretchTail?: [number, number];
   /** where the tail starts along the body */
   tail?: number;
   /** turtle: flippers are the parts wider than this fraction of the half-width */
@@ -90,7 +124,8 @@ const hsl = (hex: number, f: (h: { h: number; s: number; l: number }) => void) =
 const SPECS: Record<string, Spec> = {
   tiger: { src: 'tiger', height: 1.05, legTop: 0.5, neck: [0.28, 0.6], tail: -0.32, gait: 'quad', speed: 0.9 },
   elephant: { src: 'elephant', height: 2.9, legTop: 0.42, neck: [0.3, 0.6], tail: -0.42, gait: 'quad', speed: 0.8, grazes: true, noGallop: true },
-  monkey: { src: 'monkey', height: 0.55, legTop: 0, gait: 'sitter', speed: 0.6 },
+  // rhesus macaque: the baboon turned brown-grey (the pink face and rump are right already)
+  monkey: { src: 'macaque', height: 0.5, legTop: 0.4, neck: [0.3, 0.6], tail: -0.3, recolor: (h) => hsl(h, (c) => { if (c.s < 0.15) { c.h = 0.09; c.s = 0.28; c.l *= 1.1; } }), gait: 'quad', stays: true, speed: 0.6 },
   camel: { src: 'camel', height: 2.2, legTop: 0.48, neck: [0.22, 0.6], tail: -0.42, gait: 'quad', speed: 0.9, grazes: true },
   // the Indian elk is the sambar: same bulk and colour, smaller antlers
   elk: { src: 'sambar', height: 1.9, legTop: 0.42, neck: [0.25, 0.55], tail: -0.42, shrinkAbove: [0.66, 0.5], gait: 'quad', speed: 1.0, grazes: true },
@@ -101,10 +136,54 @@ const SPECS: Record<string, Spec> = {
   // blackbuck: the gazelle's back goes black over its white belly
   cat: { src: 'cat', height: 0.3, legTop: 0.45, neck: [0.28, 0.6], tail: -0.3, gait: 'quad', speed: 0.4 },
   blackbuck: { src: 'blackbuck', height: 1.25, legTop: 0.45, neck: [0.25, 0.55], tail: -0.42, recolor: (h) => hsl(h, (c) => { if (c.l < 0.62) { c.s *= 0.3; c.l *= 0.25; } }), gait: 'quad', speed: 0.9, grazes: true },
+  // ---- birds
+  // house crow: black with the grey nape and breast collar
+  crow: { src: 'crow', height: 0.3, legTop: 0.26, biped: true, neck: [0.2, 0.62], tail: -0.22, recolor: (h, p, b) => { const f = frac(p, b); return f.z > 0.55 && f.z < 0.78 && f.y > 0.5 && f.y < 0.85 ? 0x50535a : h; }, gait: 'bird', speed: 0.35, grazes: true },
+  // rock pigeon: the white dove turned blue-grey, with a dark head, a green and purple neck, two black
+  // wing bars and a dark tail band
+  pigeon: { src: 'dove', height: 0.25, legTop: 0.16, biped: true, neck: [0.22, 0.6], tail: -0.25, recolor: pigeon, gait: 'bird', speed: 0.3, grazes: true },
+  owl: { src: 'owl', height: 0.38, legTop: 0, neck: [0, 0.72], neckUp: true, gait: 'perch', speed: 1.8 },
+  // grey heron: the blue heron greyed, with a pale neck and head
+  heron: { src: 'heron', height: 0.95, legTop: 0.38, biped: true, neck: [0.12, 0.55], tail: -0.4, hop: 0.015, recolor: (h, p, b) => hsl(h, (c) => { if (c.s < 0.45 && c.l > 0.15) { const f = frac(p, b); c.s = 0.05; c.h = 0.55; c.l = f.z > 0.55 && f.y > 0.55 ? 0.82 : 0.6; } }), gait: 'bird', speed: 0.25, grazes: true },
+  // brown-headed gull on the coast: pale grey mantle, black wingtips
+  gull: { src: 'gull', length: 0.45, legTop: 0, wings: { from: 0.14, tip: 0.6, hz: 2.8, rest: -0.3 }, recolor: (h, p, b) => hsl(h, (c) => { if (c.s < 0.2 && c.l < 0.45) { const f = frac(p, b); c.l = Math.abs(f.x - 0.5) > 0.42 ? 0.06 : 0.7; c.h = 0.6; c.s = 0.06; } }), gait: 'flyer', speed: 7 },
+  // rose-ringed parakeet: the African grey turned green, red beak, long tail
+  parrot: { src: 'parrot', length: 0.42, legTop: 0, wings: { from: 0.12, tip: 0.55, hz: 5 }, stretchTail: [0.3, 2], recolor: parakeet, gait: 'flyer', speed: 7 },
+  // white-throated kingfisher: blue wings, chestnut body, white throat, red bill
+  kingfisher: { src: 'kingfisher', length: 0.28, legTop: 0, wings: { from: 0.12, tip: 0.55, hz: 9 }, recolor: (h, p, b) => hsl(h, (c) => { const f = frac(p, b); if (f.z > 0.94 && c.l > 0.55) { c.h = 0.01; c.s = 0.8; c.l = 0.45; } else if (c.h < 0.08 && c.s > 0.3) { c.h = 0.035; c.s = 0.7; c.l *= 0.62; } }), gait: 'hover', speed: 1 },
+  // the hawk of the dry country is a kestrel
+  hawk: { src: 'hawk', length: 0.55, legTop: 0, wings: { from: 0.12, tip: 0.55, hz: 3 }, gait: 'flyer', speed: 7 },
+  peacock: { src: 'peacock', native: true, legTop: 0.26, biped: true, neck: [0.3, 0.55], tail: -0.5, hop: 0.012, shiver: true, gait: 'bird', speed: 0.3 },
 };
 
+/** a point's place in the model's box, each axis 0..1 (z: 0 tail, 1 head) */
+function frac(p: THREE.Vector3, b: THREE.Box3) {
+  return new THREE.Vector3((p.x - b.min.x) / (b.max.x - b.min.x), (p.y - b.min.y) / (b.max.y - b.min.y), (p.z - b.min.z) / (b.max.z - b.min.z));
+}
+
+function pigeon(hex: number, p: THREE.Vector3, b: THREE.Box3): number {
+  new THREE.Color(hex).getHSL(_hsl, THREE.SRGBColorSpace);
+  if (_hsl.l < 0.6 || _hsl.s > 0.5) return hex; // eye, bill, feet
+  const f = frac(p, b), side = Math.abs(f.x - 0.5) > 0.3;
+  if (f.z > 0.8 && f.y > 0.72) return 0x5a616d; // head
+  if (f.z > 0.64 && f.y > 0.5) return f.y > 0.7 ? 0x4c7a68 : 0x6c5a86; // neck sheen
+  if (f.z < 0.14) return 0x3c414a; // tail band
+  if (side && ((f.z > 0.34 && f.z < 0.39) || (f.z > 0.43 && f.z < 0.48))) return 0x24262a; // wing bars
+  return side ? 0x9ea7b5 : 0x8c95a5;
+}
+
+function parakeet(hex: number, p: THREE.Vector3, b: THREE.Box3): number {
+  new THREE.Color(hex).getHSL(_hsl, THREE.SRGBColorSpace);
+  const f = frac(p, b);
+  if (_hsl.l < 0.12 && f.z > 0.88) return 0xc8202a; // hooked red bill
+  if (_hsl.s > 0.4 && (_hsl.h < 0.05 || _hsl.h > 0.95)) return 0x3a9a8a; // tail: blue-green
+  if (_hsl.l > 0.8) return 0x9ae070; // face
+  if (_hsl.l > 0.12) return f.z > 0.78 ? 0x86d45c : Math.abs(f.x - 0.5) > 0.2 ? 0x4fa83a : 0x6cc04a;
+  return hex;
+}
+
 export const STATIC_SPECIES = Object.keys(SPECS);
-export const hasStaticAnimal = (key: string) => key in SPECS && meshes.size === Object.keys(URLS).length;
+export const hasStaticAnimal = (key: string) => key in SPECS && meshes.has(SPECS[key].src);
 
 /** What animals.ts drives: the people's Rig and the procedural rig below both fit. */
 export interface AnimalRig {
@@ -120,6 +199,7 @@ interface Bones {
   neck?: THREE.Bone;
   tail?: THREE.Bone;
   flippers: { bone: THREE.Bone; front: boolean; side: number }[];
+  wings: { root: THREE.Bone; tip?: THREE.Bone; side: number }[];
 }
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -135,26 +215,33 @@ export function makeStaticAnimal(key: string): THREE.Group {
   for (let i = 0; i < n * 3; i += 3) { pos[i] = src.pos[i] * f; pos[i + 1] = src.pos[i + 1]; pos[i + 2] = src.pos[i + 2] * f; }
   const box = new THREE.Box3().setFromArray(pos), H = box.max.y - box.min.y, L = box.max.z - box.min.z, W = box.max.x - box.min.x;
   const p = new THREE.Vector3(), c = new THREE.Color();
+  const box0 = box.clone();
   for (let i = 0; i < n; i++) {
     p.fromArray(pos, i * 3);
+    if (sp.stretchTail) {
+      const zc = box0.min.z + sp.stretchTail[0] * L;
+      if (p.z < zc) p.z = zc - (zc - p.z) * sp.stretchTail[1];
+    }
     if (sp.shrinkAbove && p.y > sp.shrinkAbove[0] * H) {
       // pull antlers in towards the top of the head
       const y0 = sp.shrinkAbove[0] * H, k = sp.shrinkAbove[1];
       const hz = box.max.z * 0.62; // roughly over the head
       p.y = y0 + (p.y - y0) * k; p.x *= k; p.z = hz + (p.z - hz) * k;
     }
-    p.toArray(pos, i * 3);
     c.setRGB(src.col[i * 3], src.col[i * 3 + 1], src.col[i * 3 + 2]);
-    if (sp.recolor) c.setHex(sp.recolor(c.getHex(), p, box));
+    if (sp.recolor) c.setHex(sp.recolor(c.getHex(), p, box0));
+    p.toArray(pos, i * 3);
     c.toArray(col, i * 3);
   }
+  if (sp.stretchTail) { box.setFromArray(pos); }
+  const Lz = box.max.z - box.min.z;
 
   // ---- skeleton, in file units (the body group scales it to metres)
   const legY = sp.legTop * H;
   const body = new THREE.Bone();
   body.name = 'body';
   body.position.set(0, legY || H * 0.4, 0);
-  const bones: Bones = { body, legs: [], flippers: [] };
+  const bones: Bones = { body, legs: [], flippers: [], wings: [] };
   const all: THREE.Bone[] = [body];
   const at = (b: THREE.Bone, parent: THREE.Bone, x: number, y: number, z: number) => {
     parent.add(b);
@@ -163,29 +250,54 @@ export function makeStaticAnimal(key: string): THREE.Group {
     all.push(b);
     return b;
   };
-  const zAt = (u: number) => box.min.z + (u + 0.5) * L;
+  const zAt = (u: number) => box.min.z + (u + 0.5) * Lz;
   const neckZ = sp.neck ? zAt(sp.neck[0]) : Infinity;
   // legs: the low vertices behind the neck (not a hanging trunk or a lowered head) fall into four
   // clusters by side and by front/back of their middle
   const low: number[] = [];
-  if (sp.legTop > 0) for (let i = 0; i < n; i++) if (pos[i * 3 + 1] < legY * 0.6 && pos[i * 3 + 2] < neckZ) low.push(i);
+  if (sp.legTop > 0) for (let i = 0; i < n; i++) if (pos[i * 3 + 1] < legY * 0.6 && pos[i * 3 + 2] < neckZ && !src.tag?.[i]) low.push(i);
   const zMid = low.reduce((s, i) => s + pos[i * 3 + 2], 0) / Math.max(1, low.length);
-  const legOf = (x: number, z: number) => (z > zMid ? 0 : 2) + (x > 0 ? 0 : 1);
+  // birds stand on two legs, one each side
+  const legOf = (x: number, z: number) => (sp.biped || z > zMid ? 0 : 2) + (x > 0 ? 0 : 1);
+  const legZ: number[] = [];
   if (low.length) {
-    const sums = [0, 1, 2, 3].map(() => ({ x: 0, z: 0, n: 0 }));
+    const sums = (sp.biped ? [0, 1] : [0, 1, 2, 3]).map(() => ({ x: 0, z: 0, n: 0 }));
     for (const i of low) { const s = sums[legOf(pos[i * 3], pos[i * 3 + 2])]; s.x += pos[i * 3]; s.z += pos[i * 3 + 2]; s.n++; }
     sums.forEach((s, k) => {
       const x = s.n ? s.x / s.n : (k % 2 ? -W / 4 : W / 4), z = s.n ? s.z / s.n : (k < 2 ? L / 4 : -L / 4);
+      legZ.push(z);
       const hip = at(new THREE.Bone(), body, x, legY, z);
       const knee = at(new THREE.Bone(), hip, x, legY * 0.48, z);
       bones.legs.push({ hip, knee, front: k < 2, side: k % 2 ? -1 : 1 });
     });
   }
-  if (sp.neck) bones.neck = at(new THREE.Bone(), body, 0, sp.neck[1] * H, neckZ);
-  if (sp.tail !== undefined) bones.tail = at(new THREE.Bone(), body, 0, legY * 1.1, zAt(sp.tail));
+  if (sp.neck && sp.neckUp) {
+    // an upright bird's head turns about its own middle
+    let x = 0, z = 0, k = 0;
+    for (let i = 0; i < n; i++) if (pos[i * 3 + 1] > sp.neck[1] * H) { x += pos[i * 3]; z += pos[i * 3 + 2]; k++; }
+    bones.neck = at(new THREE.Bone(), body, k ? x / k : 0, sp.neck[1] * H, k ? z / k : 0);
+  } else if (sp.neck) bones.neck = at(new THREE.Bone(), body, 0, sp.neck[1] * H, neckZ);
+  if (sp.tail !== undefined) bones.tail = at(new THREE.Bone(), body, 0, legY ? legY * 1.1 : H * 0.45, zAt(sp.tail));
   if (sp.flippers) {
     for (const [front, side] of [[true, 1], [true, -1], [false, 1], [false, -1]] as const) {
       bones.flippers.push({ bone: at(new THREE.Bone(), body, side * W * 0.5 * sp.flippers, H * 0.3, front ? L * 0.18 : -L * 0.25), front, side });
+    }
+  }
+  // wings: a shoulder where the wing leaves the body and a wrist further out, each at the middle of
+  // the vertices beyond it
+  const hw = W / 2;
+  if (sp.wings) {
+    for (const side of [1, -1]) {
+      const mid = (from: number) => {
+        let y = 0, z = 0, k = 0;
+        for (let i = 0; i < n; i++) if (pos[i * 3] * side > from * hw) { y += pos[i * 3 + 1]; z += pos[i * 3 + 2]; k++; }
+        return k ? [y / k, z / k] : [H * 0.6, 0];
+      };
+      const [ry, rz] = mid(sp.wings.from);
+      const root = at(new THREE.Bone(), body, side * sp.wings.from * hw, ry, rz);
+      let tip: THREE.Bone | undefined;
+      if (sp.wings.tip) { const [ty, tz] = mid(sp.wings.tip); tip = at(new THREE.Bone(), root, side * sp.wings.tip * hw, ty, tz); }
+      bones.wings.push({ root, tip, side });
     }
   }
   const index = new Map(all.map((b, i) => [b, i]));
@@ -196,9 +308,20 @@ export function makeStaticAnimal(key: string): THREE.Group {
   for (let i = 0; i < n; i++) {
     const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
     const w: [number, number][] = [];
-    if (bones.neck && z > neckZ - L * 0.06) {
+    const ax = Math.abs(x);
+    if (src.tag?.[i] && bones.tail) {
+      w.push([index.get(bones.tail)!, 1]);
+    } else if (sp.wings && ax > sp.wings.from * hw * 0.85) {
+      const wing = bones.wings[x > 0 ? 0 : 1];
+      const ww = smooth(sp.wings.from * hw * 0.85, sp.wings.from * hw * 1.15, ax);
+      const wt = wing.tip ? smooth(sp.wings.tip! * hw * 0.9, sp.wings.tip! * hw * 1.1, ax) : 0;
+      w.push([index.get(wing.root)!, ww * (1 - wt)]);
+      if (wing.tip) w.push([index.get(wing.tip)!, ww * wt]);
+    } else if (bones.neck && sp.neckUp && y > sp.neck![1] * H - band) {
+      w.push([index.get(bones.neck)!, smooth(sp.neck![1] * H - band, sp.neck![1] * H + band, y)]);
+    } else if (bones.neck && !sp.neckUp && z > neckZ - L * 0.06) {
       w.push([index.get(bones.neck)!, smooth(neckZ - L * 0.06, neckZ + L * 0.06, z)]);
-    } else if (bones.legs.length && y < legY + band) {
+    } else if (bones.legs.length && y < legY + band && (!sp.biped || Math.abs(z - legZ[legOf(x, z)]) < L * 0.12)) {
       const leg = bones.legs[legOf(x, z)];
       const wl = smooth(legY + band, legY - band, y);
       const wk = smooth(legY * 0.48 + band * 0.6, legY * 0.48 - band * 0.6, y);
@@ -226,19 +349,29 @@ export function makeStaticAnimal(key: string): THREE.Group {
   const root = new THREE.Group();
   const holder = new THREE.Group(); // scaled to metres, turned to face -z
   root.add(holder);
-  holder.scale.setScalar(sp.length ? sp.length / L : (sp.height ?? 1) / H);
+  holder.scale.setScalar(sp.native ? 1 : sp.length ? sp.length / Lz : (sp.height ?? 1) / H);
   holder.rotation.y = Math.PI;
   holder.add(body, mesh);
   holder.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(all);
   mesh.bind(skeleton);
-  mesh.boundingBox = new THREE.Box3(new THREE.Vector3(-W, 0, -L), new THREE.Vector3(W, H * 1.2, L));
-  mesh.boundingSphere = mesh.boundingBox.getBoundingSphere(new THREE.Sphere());
+  // bounds for culling, in the mesh's own units: a sphere about the middle holding every vertex,
+  // with room for wings raised or a body swung by the rig
+  const mid = new THREE.Vector3(0, H / 2, (box.min.z + box.max.z) / 2);
+  let r2 = 0;
+  for (let i = 0; i < n; i++) r2 = Math.max(r2, p.fromArray(pos, i * 3).distanceToSquared(mid));
+  mesh.boundingSphere = new THREE.Sphere(mid, Math.sqrt(r2) * 1.25);
+  mesh.boundingBox = new THREE.Box3().setFromCenterAndSize(mid, new THREE.Vector3().setScalar(mesh.boundingSphere.radius * 2));
 
-  const rig = new ProcRig(bones, sp.gait, legY / Math.max(H, 1e-6), !sp.noGallop);
+  const rig = new ProcRig(bones, sp, legY / Math.max(H, 1e-6));
   rig.update(0);
   root.userData.rig = rig;
-  root.userData.gait = sp.gait === 'crawl' ? 'quad' : sp.gait;
+  // what animals.ts moves by: a perched owl sits until scared, then flies
+  root.userData.gait = sp.gait === 'crawl' ? 'quad' : sp.gait === 'perch' || sp.stays ? 'sitter' : sp.gait;
+  // only birds modelled with open wings fly; the perched ones (and the peacock) walk off when
+  // scared, and the owl just watches
+  root.userData.flies = !!sp.wings;
+  root.userData.flees = sp.gait !== 'perch';
   root.userData.speed = sp.speed;
   root.userData.grazes = !!sp.grazes;
   root.userData.limbs = [];
@@ -247,45 +380,54 @@ export function makeStaticAnimal(key: string): THREE.Group {
 
 /**
  * Procedural motion on the generated bones: walk (diagonal pairs), gallop (front pair, then back
- * pair), graze (neck down) and idle (breathing, a slow head and tail), easing between them.
+ * pair), graze (neck down) and idle (breathing, a slow head and tail), easing between them. Birds:
+ * fly (wingbeats broken by glides), hover, take off (fast beats), hop, peck and look about.
  */
 class ProcRig implements AnimalRig {
   extra: [string, number][] = [];
   private t = Math.random() * 10;
-  private want = { walk: 0, gallop: 0, graze: 0 };
-  private now = { walk: 0, gallop: 0, graze: 0 };
+  private want = { walk: 0, gallop: 0, graze: 0, fly: 0, flap: 0, hover: 0, glide: 0 };
+  private now = { ...this.want };
   private rate = 1;
   private hurry = 1;
+  /** wingbeat phase, accumulated so a change of rate never jumps */
+  private beat = 0;
+  private gait: Gait;
+  private gallops: boolean;
   private rest: { b: THREE.Bone; q: THREE.Quaternion; p: THREE.Vector3 }[];
 
-  constructor(private bones: Bones, private gait: Gait, legFrac: number, private gallops: boolean) {
-    const list = [bones.body, ...bones.legs.flatMap((l) => [l.hip, l.knee]), ...(bones.neck ? [bones.neck] : []), ...(bones.tail ? [bones.tail] : []), ...bones.flippers.map((f) => f.bone)];
+  constructor(private bones: Bones, private sp: Spec, legFrac: number) {
+    this.gait = sp.gait;
+    this.gallops = !sp.noGallop;
+    const list = [bones.body, ...bones.legs.flatMap((l) => [l.hip, l.knee]), ...(bones.neck ? [bones.neck] : []), ...(bones.tail ? [bones.tail] : []), ...bones.flippers.map((f) => f.bone),
+      ...bones.wings.flatMap((w) => (w.tip ? [w.root, w.tip] : [w.root]))];
     this.rest = list.map((b) => ({ b, q: b.quaternion.clone(), p: b.position.clone() }));
     // longer legs step more slowly
     this.rate = 1.6 / Math.max(0.35, legFrac * 2);
   }
 
-  /** 'Walk', 'Gallop', 'Eating' or anything else for idle; the fade is the fixed easing in update() */
+  /** 'Walk', 'Gallop', 'Eating', 'Fly', 'Hover' or anything else for idle; the fade is the fixed easing in update().
+   * A bird without wing bones answers 'Gallop' with a hurried walk. */
   play(name: string) {
+    if (BIRD_GAITS.includes(this.gait)) {
+      const wings = this.bones.wings.length > 0;
+      this.want = { walk: name === 'Walk' || (name === 'Gallop' && !wings) ? 1 : 0, gallop: 0, graze: name === 'Eating' ? 1 : 0, fly: name === 'Fly' ? 1 : 0, flap: name === 'Gallop' && wings ? 1 : 0, hover: name === 'Hover' ? 1 : 0, glide: this.want.glide };
+      return;
+    }
     const run = name === 'Gallop' && this.gallops;
-    this.want = { walk: name === 'Walk' || name === 'Swim' || (name === 'Gallop' && !run) ? 1 : 0, gallop: run ? 1 : 0, graze: name === 'Eating' ? 1 : 0 };
+    this.want = { ...this.want, walk: name === 'Walk' || name === 'Swim' || (name === 'Gallop' && !run) ? 1 : 0, gallop: run ? 1 : 0, graze: name === 'Eating' ? 1 : 0 };
     this.hurry = name === 'Gallop' && !run ? 1.8 : 1;
   }
 
   update(dt: number) {
     const k = Math.min(1, dt * 4);
-    for (const key of ['walk', 'gallop', 'graze'] as const) this.now[key] += (this.want[key] - this.now[key]) * k;
+    for (const key of Object.keys(this.now) as (keyof typeof this.now)[]) this.now[key] += (this.want[key] - this.now[key]) * k;
+    for (const r of this.rest) { r.b.quaternion.copy(r.q); r.b.position.copy(r.p); }
+    if (BIRD_GAITS.includes(this.gait)) { this.bird(dt); return; }
     const { walk, gallop, graze } = this.now;
     this.t += dt * this.rate * (1 + gallop * 1.2) * this.hurry;
     const ph = this.t * Math.PI * 2;
-    for (const r of this.rest) { r.b.quaternion.copy(r.q); r.b.position.copy(r.p); }
     const B = this.bones;
-    if (this.gait === 'sitter') {
-      // a sitting monkey: breathing and looking around
-      B.body.rotateY(Math.sin(this.t * 0.4) * 0.15);
-      B.body.position.y += Math.sin(ph * 0.3) * 0.004;
-      return;
-    }
     // body: a bob with each step, a rock when galloping
     B.body.position.y += (Math.abs(Math.sin(ph)) * 0.02 * walk + Math.sin(ph) * 0.05 * gallop) * B.body.position.y;
     B.body.rotateX(Math.sin(ph) * 0.06 * gallop);
@@ -306,5 +448,51 @@ class ProcRig implements AnimalRig {
     }
     if (B.neck) B.neck.rotateX(graze * 0.75 + Math.sin(ph * (walk > 0.1 ? 1 : 0.15)) * 0.04 + walk * 0.05);
     if (B.tail) B.tail.rotateY(Math.sin(this.t * 1.7) * 0.25);
+  }
+
+  private bird(dt: number) {
+    const B = this.bones, sp = this.sp, t = (this.t += dt);
+    const hz = sp.wings?.hz ?? 4;
+    // flying birds glide for a few seconds now and then
+    this.want.glide = Math.sin(t * 0.45) > 0.35 ? 1 : 0;
+    const { walk, graze, fly, flap, hover, glide } = this.now;
+    // wings: beat about the shoulder, the wrist trailing
+    const amp = fly * (1 - glide) * 0.6 + flap * 1.0 + hover * 0.85;
+    this.beat += dt * hz * (1 + flap * 0.4 + hover * 0.6) * Math.PI * 2;
+    for (const w of B.wings) {
+      w.root.rotateZ(w.side * (Math.sin(this.beat) * amp + fly * glide * 0.06 + (sp.wings?.rest ?? 0) * (fly + hover)));
+      w.tip?.rotateZ(w.side * Math.sin(this.beat - 0.8) * amp * 0.55);
+    }
+    // the body rises a touch on each downstroke; a hovering bird hangs head-up
+    B.body.position.y += Math.cos(this.beat) * 0.02 * amp * B.body.position.y;
+    B.body.rotateX(-0.5 * hover);
+    // walking: the legs step in turn, the body rising over each step
+    const step = t * 3.2 * Math.PI;
+    B.body.position.y += Math.abs(Math.sin(step)) * (sp.hop ?? 0.03) * walk * B.body.position.y;
+    for (const leg of B.legs) {
+      const ph = step + (leg.side > 0 ? 0 : Math.PI);
+      leg.hip.rotateX(Math.sin(ph) * 0.4 * walk);
+      // the foot lifts as it swings forward (a bird's ankle bends the other way to a knee)
+      leg.knee.rotateX(Math.max(0, Math.cos(ph)) * 0.7 * walk);
+    }
+    if (B.neck) {
+      if (sp.neckUp) {
+        // an owl swivels its head, holding each look for a while
+        const look = Math.sin(t * 0.35) + 0.5 * Math.sin(t * 0.9);
+        B.neck.rotateY(THREE.MathUtils.clamp(look, -1, 1) * 1.3 * (1 - flap));
+      } else {
+        // pecking: quick jabs; walking: the head bobs; idle: a look about
+        const peck = Math.pow(Math.max(0, Math.sin(t * 2.6)), 6);
+        B.neck.rotateX(graze * (0.2 + peck * 0.8) + Math.sin(step * 2) * 0.1 * walk);
+        B.neck.rotateY(Math.sin(t * 0.6) * 0.4 * (1 - graze) * (1 - walk) * (1 - amp));
+      }
+    }
+    if (B.tail) {
+      if (sp.shiver) {
+        // a peacock rattles its train in bursts
+        const burst = THREE.MathUtils.smoothstep(Math.sin(t * 0.5), 0.5, 0.8);
+        B.tail.rotateX(Math.sin(t * 48) * 0.012 * burst - 0.04 * walk);
+      } else B.tail.rotateX(Math.sin(t * 1.3) * 0.06 * (1 - amp) - hover * 0.4);
+    }
   }
 }
