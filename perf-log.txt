@@ -1,3 +1,4 @@
+# Baseline from before the off-the-shelf people, animals and hand-built vegetation landed; not yet re-measured with them.
 # 1920x1080, software GL (SwiftShader): CPU timings are meaningful, GPU time is not.
 medium forest    sim  0.40 ms  render-submit   5.40 ms  draw calls  103  tris   273k  instances   3259  worst chunk build 35.6 ms slice, 37 ms total
 medium coast     sim  0.50 ms  render-submit   8.10 ms  draw calls  105  tris   183k  instances   1464  worst chunk build 22.2 ms slice, 36 ms total

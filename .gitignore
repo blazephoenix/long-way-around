@@ -28,5 +28,5 @@ Thumbs.db
 # Claude Code: per-user settings stay local; shared settings are committed
 .claude/settings.local.json
 
-# Downloaded sources for scripts/people-assets.mjs
+# Downloaded sources for the asset scripts (scripts/*-assets.mjs)
 .cache/

@@ -28,8 +28,6 @@ Use the Claude desktop app's built-in browser (`Claude_Browser` tools) for visua
 
 Drive the game by running JavaScript in the page through the debug globals set in `src/main.ts` / `App.newGame`: `window.__game`, `__app`, `__sites`, `__subjects`, `__features`, `__chunkGen`. Typical pattern: `g.stop()`, `g.spawnAt(g.findBiome('city'))`, `g.simulate(seconds)`, then render a frame with `g.tick(1/60, true)`. Before taking a screenshot, wait until `g.streamer.tilesPending === 0`. Two shortcuts: `g.lookAtSite(kind)` frames a site, and `g.renderer.info.render` gives draw calls and triangles.
 
-`scripts/*.mjs` holds the original Playwright versions of these checks (screenshots, `perf.mjs` → `perf-log.txt`, milestone checks `m3check`–`m6check`). Read them for recipes, not to run: they import Playwright from a sandbox path (`/opt/npm-tools/...`) that does not exist here.
-
 ## Architecture
 
 **Ownership.** `main.ts` → `ui/App` (renderer, input, settings, audio, title/pause/menus) → `App.newGame()` builds a fresh `Game` per seed. `Game` (`src/game.ts`) owns the scene, world, streamer, car, walker and every system, and `Game.tick(dt, render)` is the whole frame. `simulate(seconds)` runs ticks without rendering for headless use.
@@ -63,8 +61,8 @@ Drive the game by running JavaScript in the page through the debug globals set i
 
 ## Git
 
-- Branch `main`. History begins with the initial import on 2026-10-15; nothing earlier exists, so `git log` and `git blame` cannot explain older design decisions. Use `README.md` design notes instead.
+- Branch `main`. History begins with the initial import on 2026-10-15; `git log` and `git blame` cannot explain older design decisions, so use the `README.md` design notes.
 - Before committing, run `npx tsc --noEmit` and `npm test`. If the change touches `ECON`, prices or payouts, run `npm run sim` and put the new average-profile ratio in the commit message.
-- If a change moves draw calls or triangles, re-measure and update `perf-log.txt` in the same commit.
+- If a change moves draw calls or triangles, re-measure with `?fps` in each biome and update `perf-log.txt` in the same commit.
 - Not tracked: `node_modules/`, `dist/`, `artifact/` (build outputs) and `.claude/settings.local.json` (per-user). `.claude/settings.json` is shared and tracked.
-- Commit only when asked. No remote is configured yet.
+- Commit only when asked. Remote: `origin` is https://github.com/blazephoenix/long-way-around (public). Every push to `main` builds and deploys to GitHub Pages (https://blazephoenix.github.io/long-way-around/) through `.github/workflows/pages.yml`, so push only what is ready to play.

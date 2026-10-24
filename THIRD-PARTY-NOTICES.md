@@ -1,7 +1,8 @@
 # Third-party notices
 
-Long Way Round generates its assets in code, except the people models below. Where code or assets
-come from another project, the original license and copyright notice are reproduced here.
+Long Way Round generates most of its assets in code. The people, most animals and the wind turbine
+are models from the projects below, and the water shader adapts code from another project; each is
+listed with its license.
 
 ## cortiz2894/stylized-components
 

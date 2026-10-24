@@ -7,7 +7,7 @@ The India layer and the biome palettes were built from these references. Slogans
 | In the game | Reference | What I took from it |
 |---|---|---|
 | Kilometre stones: yellow-topped on national highways, green on state highways, orange on village side roads | [Orissa Post: why milestones have different colours](https://www.orissapost.com/why-do-roads-in-india-have-colored-milestones/amp/) | Colour coding by road type; dome-topped stone with road number above, town and distance below |
-| Ghat roads: numbered hairpin boards, parapets, eucalyptus on the slopes, wildlife at dawn and dusk | [Nilgiri Ghat Roads (Wikipedia)](https://en.wikipedia.org/wiki/Nilgiri_Ghat_Roads) | Bends are numbered per climb ("14 numbered hairpin bends" on Coonoor ghat); tea estates and eucalyptus on hillsides; animals feeding along the road early and late |
+| Ghat roads: numbered hairpin boards, parapets, eucalyptus on the slopes, wildlife at dawn and dusk | [Nilgiri Ghat Roads (Wikipedia)](https://en.wikipedia.org/wiki/Nilgiri_Ghat_Roads) | Bends are numbered per climb ("14 numbered hairpin bends" on Coonoor ghat); eucalyptus on hillsides; animals feeding along the road early and late |
 | Tigers and elephants crossing forest roads at the quiet hours | [The News Minute: Bandipur night traffic ban](https://www.thenewsminute.com/karnataka/explained-why-environmentalists-don-t-want-vehicles-enter-bandipur-forest-night-110107) | Core tiger and elephant habitat cut by a highway; teak and rosewood forest; why the tiger is a dusk subject on a road |
 | Cantilevered fishing nets on the coast | [Kerala Tourism: Chinese fishing nets, Kochi](https://www.keralatourism.org/kochi/chinese-fishing-nets-kochi) | About 10 m tall, teak and bamboo poles, a net spread ~20 m, ~30 cm stones on ropes as counterweights, a line of nets along the shore, worked morning and evening |
 | Stepwell at the end of a desert side road | [Chand Baori (Wikipedia)](https://en.wikipedia.org/wiki/Chand_Baori) | Inverted pyramid of tiers, flights on three sides in a diamond pattern, a pillared multi-storey corridor on the fourth side |
@@ -24,7 +24,7 @@ The India layer and the biome palettes were built from these references. Slogans
 - **Regions are spread out, not blended into one place.** Bengali, Kannada, Tamil, Malayalam, Marathi, Punjabi and Hindi words each appear where the speaker comes from. Festivals named include Durga Puja, Onam, Pongal, Christmas and Eid.
 - **Animals behave like animals.** Cows and buffaloes rest on rural roads and traffic eases around them; it is never played as a joke.
 - **No caricatured accents or mystical gurus.** Characters are a student, a retired geography teacher, a trucker waiting on a clutch plate, a pilgrim and a photographer, each with ordinary concerns.
-- **Original slogans, real names.** Truck backs carry originals in the "please honk" tradition ("AMMA SAYS DRIVE SLOW", "HONK SOFTLY / I AM LISTENING"). Paint names describe colours ("Vintage sedan white", "Family hatchback red"). Ghat signs are original rhymes ("DRIVE LIKE THE CHAI IS HOT"). Names of places and businesses are real (decided 2026-10-22, replacing the earlier invented names); no logos are drawn, only names in text.
+- **Original slogans, real names.** Truck backs carry originals in the "please honk" tradition ("AMMA SAYS DRIVE SLOW", "HONK SOFTLY / I AM LISTENING"). Paint names describe colours ("Vintage sedan white", "Family hatchback red"). Ghat signs are original rhymes ("DRIVE LIKE THE CHAI IS HOT"). Names of places and businesses are real; no logos are drawn, only names in text.
 
 ## Names
 
@@ -37,8 +37,3 @@ Real names, so the road reads like a real Indian highway. Each kind walks its li
 | Dhabas | Well-known highway dhabas of Murthal, Amritsar, Ambala and Jalandhar, and the Sethi Dhaba hoarding photographed in Punjab |
 | Diners | Highway restaurant chains (Haldiram's, Sagar Ratna, A2B, Kamat, MTR) |
 | Motels | Haryana Tourism's highway complexes, named after birds (Blue Jay, Skylark, Kingfisher) |
-| Tea estates | Estates of the Nilgiris and Munnar (Glendale, Korakundah, Chamraj, Kolukkumalai, Lockhart) |
-
-## One deliberate deviation from the brief
-
-The brief suggested "Ambassador white" and "Maruti red" as paint names. Both are brand names, which the brief's own rule forbids, so the game uses "Vintage sedan white" and "Family hatchback red".
