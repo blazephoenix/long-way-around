@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { loadPeople } from '../render/peopleModels';
 import { loadAnimals } from '../render/animalPack';
+import { loadPropAssets } from '../render/propAssets';
 import { Game } from '../game';
 import { Input } from '../core/input';
 import { loadSettings, saveSettings, Settings } from '../core/settings';
@@ -85,7 +86,7 @@ export class App {
 
   async boot() {
     // makePerson and the pack animals need their models before any game exists
-    await Promise.all([loadPeople(), loadAnimals()]);
+    await Promise.all([loadPeople(), loadAnimals(), loadPropAssets()]);
     const seed = this.params.get('seed') ?? randomSeedString();
     const hour = this.params.has('hour') ? parseFloat(this.params.get('hour')!) : 8.5;
     const biome = (this.params.get('biome') as BiomeId | null) ?? null;

@@ -92,3 +92,12 @@ the hawk simplified and levelled, and rigged and animated at runtime. The peacoc
 
 License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/.
 
+## Structures
+
+Used in: `src/assets/props/windturbine.glb` (built by `scripts/prop-assets.mjs`), from Poly Pizza
+(https://poly.pizza). Baked to flat colours, scaled to the game's hub height, and split so the rotor
+turns.
+
+- Wind Turbine, by Colin Hopkins (https://poly.pizza/m/3JKnKecvdMI)
+
+License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/.

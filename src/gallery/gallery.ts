@@ -10,6 +10,7 @@ import { nightGlow } from '../render/props';
 import { updateWaterLight } from '../render/water';
 import { loadPeople, type Rig } from '../render/peopleModels';
 import { loadAnimals } from '../render/animalPack';
+import { loadPropAssets } from '../render/propAssets';
 import { disposeTree } from '../render/models';
 import { EYE } from '../vehicle/cockpit';
 import { ASSETS, type Asset } from './assets';
@@ -25,7 +26,7 @@ const GAP = 4; // metres between cells
 const ROW_GAP = 14; // metres between groups
 
 export async function startGallery(canvas: HTMLCanvasElement, ui: HTMLElement) {
-  await Promise.all([loadPeople(), loadAnimals()]);
+  await Promise.all([loadPeople(), loadAnimals(), loadPropAssets()]);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;

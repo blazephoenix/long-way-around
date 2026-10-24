@@ -125,6 +125,33 @@ export class ModelBuilder {
     return this;
   }
 
+  /** a non-indexed geometry that carries its own (linear) vertex colours, flat-shaded */
+  addColored(geo: THREE.BufferGeometry, xf: Xf = {}): this {
+    let m = this.matrix(xf);
+    if (this.base) m = tmpM2.multiplyMatrices(this.base, m);
+    const P = geo.attributes.position, C = geo.attributes.color;
+    const k = P.count * 3;
+    this.P.reserve(k); this.N.reserve(k); this.C.reserve(k); this.T.reserve(k / 3);
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+    let o = this.P.n;
+    for (let i = 0; i < P.count; i += 3) {
+      a.fromBufferAttribute(P, i).applyMatrix4(m);
+      b.fromBufferAttribute(P, i + 1).applyMatrix4(m);
+      c.fromBufferAttribute(P, i + 2).applyMatrix4(m);
+      n.subVectors(c, b).cross(tmpV.subVectors(a, b)).normalize();
+      for (const [j, v] of [a, b, c].entries()) {
+        this.P.a[o] = v.x; this.P.a[o + 1] = v.y; this.P.a[o + 2] = v.z;
+        this.N.a[o] = n.x; this.N.a[o + 1] = n.y; this.N.a[o + 2] = n.z;
+        this.C.a[o] = C.getX(i + j); this.C.a[o + 1] = C.getY(i + j); this.C.a[o + 2] = C.getZ(i + j);
+        this.T.a[o / 3] = this.tintOn;
+        o += 3;
+      }
+    }
+    this.P.n = this.N.n = this.C.n = o;
+    this.T.n = o / 3;
+    return this;
+  }
+
   box(w: number, h: number, d: number, color: number, xf: Xf = {}) {
     this.push(tpl('box', () => new THREE.BoxGeometry(1, 1, 1)), this.matrix(xf, [w, h, d]), color);
     return this;

@@ -10,6 +10,7 @@ import { toon, shared } from './toon';
 import type { Site } from '../world/sites';
 import type { World } from '../world/world';
 import { Rng, hashString } from '../world/prng';
+import { propPart } from './propAssets';
 
 export const nightGlow = { value: 0 };
 
@@ -29,6 +30,8 @@ export interface PropOut {
   extras: THREE.Object3D[]; // animated or textured objects
 }
 
+/** the wind turbines' rotors share one material (each chunk disposes its own rotor geometry) */
+const rotorMat = toon({ vertexColors: true });
 const signCache = new Map<string, THREE.Material>();
 export function signMaterial(text: string, bg = '#f2ead2', fg = '#2a2a2a', w = 512, h = 192, font = '700 64px Mukta, system-ui, sans-serif'): THREE.Material {
   const key = text + bg + fg + w + h + font;
@@ -295,17 +298,12 @@ const B: Record<string, Builder> = {
     }
   },
   windmill: (m, _g, _s, _r, out) => {
-    // a modern three-blade wind turbine, as seen across many Indian farm plains
-    m.cyl(0.6, 1.1, 34, 10, 0xf2f2ee, { p: [0, 17, 0] });
-    m.box(1.4, 1.4, 3.4, 0xf2f2ee, { p: [0, 34.5, 0.4] });
-    const rotor = new ModelBuilder();
-    rotor.sphere(0.8, 8, 6, 0xf2f2ee, { s: [1, 1, 1.4] });
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2;
-      rotor.box(0.7, 15, 0.18, 0xf6f6f2, { p: [Math.sin(a) * 7.5, Math.cos(a) * 7.5, 0], r: [0, 0, -a] });
-    }
-    const mesh = new THREE.Mesh(rotor.build(), toon({ vertexColors: true }));
-    mesh.position.set(0, 34.5, -1.6);
+    // a modern three-blade wind turbine, as seen across many Indian farm plains ("Wind Turbine" by
+    // Colin Hopkins, propAssets.ts): the tower merged in, the rotor turning on its hub
+    m.addColored(propPart('windturbine', 'tower')!.geo);
+    const rotor = propPart('windturbine', 'rotor')!;
+    const mesh = new THREE.Mesh(rotor.geo.clone(), rotorMat);
+    mesh.position.copy(rotor.at);
     mesh.userData.spin = 0.9;
     mesh.castShadow = true;
     out.extras.push(mesh);
